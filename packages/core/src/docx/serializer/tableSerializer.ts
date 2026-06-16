@@ -38,6 +38,7 @@ import type {
 import { serializeParagraph } from './paragraphSerializer';
 import { serializeConditionalFormatStyle } from './conditionalFormatSerializer';
 import { escapeXml, intAttr } from './xmlUtils';
+import { serializeTableGridForTable } from './tableGrid';
 
 function normalizeTrackedChangeInfo(info: { id: number; author: string; date?: string }): {
   id: number;
@@ -723,17 +724,6 @@ function serializeTableCellPropertyChange(change: TableCellPropertyChange): stri
 // TABLE GRID SERIALIZATION
 // ============================================================================
 
-/**
- * Serialize table grid (w:tblGrid)
- */
-function serializeTableGrid(columnWidths: number[] | undefined): string {
-  if (!columnWidths || columnWidths.length === 0) return '';
-
-  const cols = columnWidths.map((w) => `<w:gridCol w:w="${intAttr(w)}"/>`);
-
-  return `<w:tblGrid>${cols.join('')}</w:tblGrid>`;
-}
-
 // ============================================================================
 // CELL CONTENT SERIALIZATION
 // ============================================================================
@@ -829,12 +819,14 @@ export function serializeTable(table: Table): string {
 
   // Table properties
   const tblPrXml = serializeTableFormatting(table.formatting, table.propertyChanges);
+  const tblGridXml = serializeTableGridForTable(table);
   if (tblPrXml) {
     parts.push(tblPrXml);
+  } else if (tblGridXml || table.rows.length > 0) {
+    parts.push('<w:tblPr/>');
   }
 
   // Table grid
-  const tblGridXml = serializeTableGrid(table.columnWidths);
   if (tblGridXml) {
     parts.push(tblGridXml);
   }

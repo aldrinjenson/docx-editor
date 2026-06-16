@@ -41,6 +41,7 @@ import type { Document } from '../types/document';
 import { serializeDocument } from './serializer/documentSerializer';
 import { type RawDocxContent } from './unzip';
 import { escapeXml } from './serializer/xmlUtils';
+import { sanitizeDocumentForExport } from './exportSanitizer';
 
 import { collectParts, findMaxRId } from './rezip/parts';
 import {
@@ -135,6 +136,7 @@ export async function repackDocx(doc: Document, options: RepackOptions = {}): Pr
   await processNewImages(parts, newZip, compressionLevel);
   await processNewWatermarkImages(exportDocument, newZip, compressionLevel);
   await processNewHyperlinks(parts, newZip, compressionLevel);
+  sanitizeDocumentForExport(exportDocument);
 
   // Serialize and update document.xml (after image/hyperlink rIds have been rewritten)
   const documentXml = serializeDocument(exportDocument);
@@ -226,6 +228,7 @@ export async function repackDocxFromRaw(
   await processNewImages(parts, newZip, compressionLevel);
   await processNewWatermarkImages(exportDocument, newZip, compressionLevel);
   await processNewHyperlinks(parts, newZip, compressionLevel);
+  sanitizeDocumentForExport(exportDocument);
 
   const documentXml = serializeDocument(exportDocument);
   newZip.file('word/document.xml', documentXml, {

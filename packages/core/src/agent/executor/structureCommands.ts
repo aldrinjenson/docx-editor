@@ -31,12 +31,28 @@ import {
   insertTextAtOffset,
 } from './helpers';
 
+const DEFAULT_TABLE_WIDTH_DXA = 9360;
+
+function distributeTableWidths(columnCount: number): number[] {
+  if (columnCount <= 0) return [];
+
+  const baseWidth = Math.floor(DEFAULT_TABLE_WIDTH_DXA / columnCount);
+  let remainder = DEFAULT_TABLE_WIDTH_DXA - baseWidth * columnCount;
+
+  return Array.from({ length: columnCount }, () => {
+    const width = baseWidth + (remainder > 0 ? 1 : 0);
+    remainder = Math.max(0, remainder - 1);
+    return width;
+  });
+}
+
 /**
  * Insert a table at a position
  */
 export function executeInsertTable(doc: Document, command: InsertTableCommand): Document {
   const newDoc = cloneDocument(doc);
   const body = newDoc.package.document;
+  const columnWidths = distributeTableWidths(command.columns);
 
   // Create table structure
   const rows: TableRow[] = [];
@@ -48,6 +64,9 @@ export function executeInsertTable(doc: Document, command: InsertTableCommand): 
       const cellText = command.data?.[r]?.[c] || '';
       cells.push({
         type: 'tableCell',
+        formatting: columnWidths[c]
+          ? { width: { value: columnWidths[c], type: 'dxa' } }
+          : undefined,
         content: [
           {
             type: 'paragraph',
@@ -66,6 +85,11 @@ export function executeInsertTable(doc: Document, command: InsertTableCommand): 
 
   const table: Table = {
     type: 'table',
+    formatting: {
+      width: { value: DEFAULT_TABLE_WIDTH_DXA, type: 'dxa' },
+      layout: 'fixed',
+    },
+    columnWidths,
     rows,
   };
 
