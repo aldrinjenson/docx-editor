@@ -90,4 +90,33 @@ describe('toProseDoc/fromProseDoc run boundaries', () => {
     expect(runTexts(outParagraph)).toEqual(['onetwo']);
     expect(runs[0].formatting?.strike).toBe(true);
   });
+
+  test('commented same-formatting runs preserve boundaries inside the comment range', () => {
+    const paragraph: Paragraph = {
+      type: 'paragraph',
+      content: [
+        { type: 'commentRangeStart', id: 42 },
+        textRun('one'),
+        textRun('two'),
+        { type: 'commentRangeEnd', id: 42 },
+      ],
+    };
+    const input = docOf(paragraph);
+
+    const pmDoc = toProseDoc(input);
+    const pmParagraph = pmDoc.firstChild!;
+    expect(pmParagraph.childCount).toBe(1);
+    expect(pmParagraph.firstChild!.marks.some((mark) => mark.type.name === 'comment')).toBe(true);
+
+    const roundTripped = fromProseDoc(pmDoc, input);
+    const outParagraph = roundTripped.package.document.content[0] as Paragraph;
+
+    expect(outParagraph.content.map((content) => content.type)).toEqual([
+      'commentRangeStart',
+      'run',
+      'run',
+      'commentRangeEnd',
+    ]);
+    expect(runTexts(outParagraph)).toEqual(['one', 'two']);
+  });
 });

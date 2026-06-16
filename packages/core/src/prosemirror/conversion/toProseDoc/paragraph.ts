@@ -9,7 +9,7 @@
  * fromProseDoc.
  */
 
-import type { Mark, Node as PMNode } from 'prosemirror-model';
+import type { Node as PMNode } from 'prosemirror-model';
 import { schema } from '../../schema';
 import type { ParagraphAttrs } from '../../schema/nodes';
 import type {
@@ -26,6 +26,7 @@ import type {
 } from '../../../types/document';
 import { mergeTextFormatting } from '../../../utils/textFormattingMerge';
 import type { StyleResolver } from '../../styles';
+import { getMarkSetKey, RUN_BOUNDARY_MARK_EXCLUSIONS } from '../markKeys';
 import { resolveTextFormatting } from './marks';
 import { convertRun, convertHyperlink, convertField, convertMathEquation } from './runs';
 import { sdtPropsToAttrs } from '../sdtAttrs';
@@ -167,15 +168,6 @@ export function convertParagraph(
   return schema.node('paragraph', attrs, inlineNodes);
 }
 
-function markSetKey(marks: readonly Mark[]): string {
-  if (marks.length === 0) return '';
-
-  return marks
-    .map((mark) => `${mark.type.name}:${JSON.stringify(mark.attrs)}`)
-    .sort()
-    .join('|');
-}
-
 function runBoundaryFromConvertedRun(
   run: Run,
   runNodes: PMNode[]
@@ -186,7 +178,7 @@ function runBoundaryFromConvertedRun(
   for (const node of runNodes) {
     if (!node.isText) return null;
     text += node.text ?? '';
-    const nodeMarksKey = markSetKey(node.marks);
+    const nodeMarksKey = getMarkSetKey(node.marks, RUN_BOUNDARY_MARK_EXCLUSIONS);
     if (marksKey != null && marksKey !== nodeMarksKey) return null;
     marksKey = nodeMarksKey;
   }

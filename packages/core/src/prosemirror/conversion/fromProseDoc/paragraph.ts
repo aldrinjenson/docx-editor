@@ -10,7 +10,7 @@
  * ./runs.ts) because it recurses back through this walker.
  */
 
-import type { Mark, Node as PMNode } from 'prosemirror-model';
+import type { Node as PMNode } from 'prosemirror-model';
 import type {
   Paragraph,
   Run,
@@ -23,6 +23,7 @@ import type {
   TrackedChangeInfo,
 } from '../../../types/document';
 import type { ParagraphAttrs } from '../../schema/nodes';
+import { getMarkSetKey, RUN_BOUNDARY_MARK_EXCLUSIONS } from '../markKeys';
 import { getLinkKey, getMarksKey, marksToTextFormatting } from './marks';
 import { sdtAttrsToProps } from '../sdtAttrs';
 import {
@@ -43,8 +44,8 @@ import {
  */
 export function convertPMParagraph(node: PMNode): Paragraph {
   const attrs = node.attrs as ParagraphAttrs;
-  let content = insertCommentRanges(extractParagraphContent(node), node);
-  content = restoreOriginalRunBoundaries(content, node);
+  let content = restoreOriginalRunBoundaries(extractParagraphContent(node), node);
+  content = insertCommentRanges(content, node);
 
   // Emit BookmarkStart/End from bookmarks attr (for TOC anchors, cross-references)
   const bookmarks = attrs.bookmarks as Array<{ id: number; name: string }> | undefined;
@@ -137,15 +138,6 @@ function runText(run: Run): string {
   return run.content.map((item) => (item.type === 'text' ? item.text : '')).join('');
 }
 
-function markSetKey(marks: readonly Mark[]): string {
-  if (marks.length === 0) return '';
-
-  return marks
-    .map((mark) => `${mark.type.name}:${JSON.stringify(mark.attrs)}`)
-    .sort()
-    .join('|');
-}
-
 function paragraphMatchesOriginalRunBoundaries(
   paragraph: PMNode,
   boundaries: OriginalRunBoundary[]
@@ -161,7 +153,7 @@ function paragraphMatchesOriginalRunBoundaries(
       return;
     }
 
-    const marksKey = markSetKey(node.marks);
+    const marksKey = getMarkSetKey(node.marks, RUN_BOUNDARY_MARK_EXCLUSIONS);
     const nodeText = node.text ?? '';
     let nodeOffset = 0;
 
@@ -318,7 +310,7 @@ function insertCommentRanges(content: ParagraphContent[], paragraph: PMNode): Pa
   // and wrap with commentRangeStart/End
   const result: ParagraphContent[] = [];
   const openedComments = new Set<number>();
-  let nodeIndex = 0;
+  const cursor = { index: 0 };
 
   paragraph.forEach((node) => {
     const nodeCommentIds = new Set<number>();
@@ -345,13 +337,13 @@ function insertCommentRanges(content: ParagraphContent[], paragraph: PMNode): Pa
       }
     }
 
-    // Push the actual content item
-    if (nodeIndex < content.length) {
-      result.push(content[nodeIndex]);
-    }
-
-    nodeIndex++;
+    appendContentForNode(result, content, cursor, node);
   });
+
+  while (cursor.index < content.length) {
+    result.push(content[cursor.index]);
+    cursor.index++;
+  }
 
   // Close any remaining open comments
   for (const cid of openedComments) {
@@ -359,6 +351,82 @@ function insertCommentRanges(content: ParagraphContent[], paragraph: PMNode): Pa
   }
 
   return result;
+}
+
+function appendContentForNode(
+  result: ParagraphContent[],
+  content: ParagraphContent[],
+  cursor: { index: number },
+  node: PMNode
+): void {
+  if (!node.isText) {
+    appendNextContentItem(result, content, cursor);
+    return;
+  }
+
+  let remainingText = (node.text ?? '').length;
+  while (remainingText > 0 && cursor.index < content.length) {
+    const item = content[cursor.index];
+    result.push(item);
+    cursor.index++;
+    remainingText -= paragraphContentTextLength(item);
+  }
+}
+
+function appendNextContentItem(
+  result: ParagraphContent[],
+  content: ParagraphContent[],
+  cursor: { index: number }
+): void {
+  if (cursor.index >= content.length) return;
+  result.push(content[cursor.index]);
+  cursor.index++;
+}
+
+function paragraphContentTextLength(content: ParagraphContent): number {
+  switch (content.type) {
+    case 'run':
+      return runContentTextLength(content);
+    case 'hyperlink':
+      return paragraphContentItemsTextLength(content.children);
+    case 'simpleField':
+      return paragraphContentItemsTextLength(content.content);
+    case 'complexField':
+      return paragraphContentItemsTextLength(content.fieldResult);
+    case 'inlineSdt':
+      return paragraphContentItemsTextLength(content.content);
+    case 'insertion':
+    case 'deletion':
+    case 'moveFrom':
+    case 'moveTo':
+      return paragraphContentItemsTextLength(content.content);
+    case 'mathEquation':
+      return content.plainText?.length ?? 0;
+    default:
+      return 0;
+  }
+}
+
+function paragraphContentItemsTextLength(content: readonly ParagraphContent[]): number {
+  return content.reduce((sum, item) => sum + paragraphContentTextLength(item), 0);
+}
+
+function runContentTextLength(run: Run): number {
+  return run.content.reduce((sum, item) => {
+    switch (item.type) {
+      case 'text':
+      case 'instrText':
+        return sum + item.text.length;
+      case 'symbol':
+        return sum + item.char.length;
+      case 'tab':
+      case 'softHyphen':
+      case 'noBreakHyphen':
+        return sum + 1;
+      default:
+        return sum;
+    }
+  }, 0);
 }
 
 /**
