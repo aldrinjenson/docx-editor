@@ -9,7 +9,7 @@
  * fromProseDoc.
  */
 
-import type { Node as PMNode } from 'prosemirror-model';
+import type { Mark, Node as PMNode } from 'prosemirror-model';
 import { schema } from '../../schema';
 import type { ParagraphAttrs } from '../../schema/nodes';
 import type {
@@ -45,6 +45,7 @@ export function convertParagraph(
   const attrs = paragraphFormattingToAttrs(paragraph, styleResolver);
   const inlineNodes: PMNode[] = [];
   let bookmarksArr: Array<{ id: number; name: string }> | undefined;
+  let originalRunBoundaries: ParagraphAttrs['_originalRunBoundaries'] = [];
 
   // Track active comment ranges for this paragraph
   const commentIds = activeCommentIds ?? new Set<number>();
@@ -70,6 +71,12 @@ export function convertParagraph(
       commentIds.delete(content.id);
     } else if (content.type === 'run') {
       let runNodes = convertRun(content, mergedStyleRunFormatting, styleResolver);
+      const runBoundary = runBoundaryFromConvertedRun(content, runNodes);
+      if (runBoundary && originalRunBoundaries) {
+        originalRunBoundaries.push(runBoundary);
+      } else {
+        originalRunBoundaries = undefined;
+      }
       if (commentIds.size > 0) {
         runNodes = applyCommentMarks(runNodes, commentIds);
       }
@@ -77,12 +84,15 @@ export function convertParagraph(
     } else if (content.type === 'hyperlink') {
       const linkNodes = convertHyperlink(content, mergedStyleRunFormatting, styleResolver);
       inlineNodes.push(...linkNodes);
+      originalRunBoundaries = undefined;
     } else if (content.type === 'simpleField' || content.type === 'complexField') {
       const fieldNode = convertField(content, mergedStyleRunFormatting);
       if (fieldNode) inlineNodes.push(fieldNode);
+      originalRunBoundaries = undefined;
     } else if (content.type === 'inlineSdt') {
       const sdtNode = convertInlineSdt(content, mergedStyleRunFormatting, styleResolver);
       if (sdtNode) inlineNodes.push(sdtNode);
+      originalRunBoundaries = undefined;
     } else if (content.type === 'insertion') {
       let insNodes = convertTrackedChange(
         content,
@@ -94,6 +104,7 @@ export function convertParagraph(
         insNodes = applyCommentMarks(insNodes, commentIds);
       }
       inlineNodes.push(...insNodes);
+      originalRunBoundaries = undefined;
     } else if (content.type === 'deletion') {
       let delNodes = convertTrackedChange(
         content,
@@ -105,6 +116,7 @@ export function convertParagraph(
         delNodes = applyCommentMarks(delNodes, commentIds);
       }
       inlineNodes.push(...delNodes);
+      originalRunBoundaries = undefined;
     } else if (content.type === 'moveFrom') {
       let moveFromNodes = convertTrackedChange(
         content,
@@ -117,6 +129,7 @@ export function convertParagraph(
         moveFromNodes = applyCommentMarks(moveFromNodes, commentIds);
       }
       inlineNodes.push(...moveFromNodes);
+      originalRunBoundaries = undefined;
     } else if (content.type === 'moveTo') {
       let moveToNodes = convertTrackedChange(
         content,
@@ -129,9 +142,13 @@ export function convertParagraph(
         moveToNodes = applyCommentMarks(moveToNodes, commentIds);
       }
       inlineNodes.push(...moveToNodes);
+      originalRunBoundaries = undefined;
     } else if (content.type === 'mathEquation') {
       const mathNode = convertMathEquation(content);
       if (mathNode) inlineNodes.push(mathNode);
+      originalRunBoundaries = undefined;
+    } else if (content.type !== 'bookmarkStart' && content.type !== 'bookmarkEnd') {
+      originalRunBoundaries = undefined;
     }
     // Collect bookmarkStart entries for round-trip
     if (content.type === 'bookmarkStart') {
@@ -143,8 +160,43 @@ export function convertParagraph(
   if (bookmarksArr) {
     attrs.bookmarks = bookmarksArr;
   }
+  if (originalRunBoundaries && originalRunBoundaries.length > 0) {
+    attrs._originalRunBoundaries = originalRunBoundaries;
+  }
 
   return schema.node('paragraph', attrs, inlineNodes);
+}
+
+function markSetKey(marks: readonly Mark[]): string {
+  if (marks.length === 0) return '';
+
+  return marks
+    .map((mark) => `${mark.type.name}:${JSON.stringify(mark.attrs)}`)
+    .sort()
+    .join('|');
+}
+
+function runBoundaryFromConvertedRun(
+  run: Run,
+  runNodes: PMNode[]
+): NonNullable<ParagraphAttrs['_originalRunBoundaries']>[number] | null {
+  let text = '';
+  let marksKey: string | undefined;
+
+  for (const node of runNodes) {
+    if (!node.isText) return null;
+    text += node.text ?? '';
+    const nodeMarksKey = markSetKey(node.marks);
+    if (marksKey != null && marksKey !== nodeMarksKey) return null;
+    marksKey = nodeMarksKey;
+  }
+
+  return {
+    text,
+    ...(marksKey != null ? { marksKey } : {}),
+    ...(run.formatting ? { formatting: run.formatting } : {}),
+    ...(run.propertyChanges ? { propertyChanges: run.propertyChanges } : {}),
+  };
 }
 
 /**

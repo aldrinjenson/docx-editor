@@ -10,7 +10,7 @@
  * ./runs.ts) because it recurses back through this walker.
  */
 
-import type { Node as PMNode } from 'prosemirror-model';
+import type { Mark, Node as PMNode } from 'prosemirror-model';
 import type {
   Paragraph,
   Run,
@@ -44,6 +44,7 @@ import {
 export function convertPMParagraph(node: PMNode): Paragraph {
   const attrs = node.attrs as ParagraphAttrs;
   let content = insertCommentRanges(extractParagraphContent(node), node);
+  content = restoreOriginalRunBoundaries(content, node);
 
   // Emit BookmarkStart/End from bookmarks attr (for TOC anchors, cross-references)
   const bookmarks = attrs.bookmarks as Array<{ id: number; name: string }> | undefined;
@@ -105,6 +106,195 @@ export function convertPMParagraph(node: PMNode): Paragraph {
   }
 
   return paragraph;
+}
+
+type OriginalRunBoundary = NonNullable<ParagraphAttrs['_originalRunBoundaries']>[number];
+
+function restoreOriginalRunBoundaries(
+  content: ParagraphContent[],
+  paragraph: PMNode
+): ParagraphContent[] {
+  const boundaries = (paragraph.attrs as ParagraphAttrs)._originalRunBoundaries;
+  if (!boundaries || boundaries.length === 0) return content;
+  if (!content.every((item): item is Run => item.type === 'run')) return content;
+
+  const runs = content;
+  if (!runs.every(isTextOnlyRun)) return content;
+
+  const currentText = runs.map(runText).join('');
+  const originalText = boundaries.map((boundary) => boundary.text).join('');
+  if (currentText !== originalText) return content;
+  if (!paragraphMatchesOriginalRunBoundaries(paragraph, boundaries)) return content;
+
+  return splitRunsByOriginalBoundaries(runs, boundaries) ?? content;
+}
+
+function isTextOnlyRun(run: Run): boolean {
+  return run.content.every((item) => item.type === 'text');
+}
+
+function runText(run: Run): string {
+  return run.content.map((item) => (item.type === 'text' ? item.text : '')).join('');
+}
+
+function markSetKey(marks: readonly Mark[]): string {
+  if (marks.length === 0) return '';
+
+  return marks
+    .map((mark) => `${mark.type.name}:${JSON.stringify(mark.attrs)}`)
+    .sort()
+    .join('|');
+}
+
+function paragraphMatchesOriginalRunBoundaries(
+  paragraph: PMNode,
+  boundaries: OriginalRunBoundary[]
+): boolean {
+  let boundaryIndex = 0;
+  let boundaryOffset = 0;
+  let matches = true;
+
+  paragraph.forEach((node) => {
+    if (!matches) return;
+    if (!node.isText) {
+      matches = false;
+      return;
+    }
+
+    const marksKey = markSetKey(node.marks);
+    const nodeText = node.text ?? '';
+    let nodeOffset = 0;
+
+    while (nodeOffset < nodeText.length) {
+      while (boundaryIndex < boundaries.length && boundaries[boundaryIndex].text.length === 0) {
+        boundaryIndex++;
+      }
+
+      const boundary = boundaries[boundaryIndex];
+      if (!boundary || marksKey !== (boundary.marksKey ?? '')) {
+        matches = false;
+        return;
+      }
+
+      const boundaryRemaining = boundary.text.length - boundaryOffset;
+      const nodeRemaining = nodeText.length - nodeOffset;
+      const count = Math.min(boundaryRemaining, nodeRemaining);
+      const nodePart = nodeText.slice(nodeOffset, nodeOffset + count);
+      const boundaryPart = boundary.text.slice(boundaryOffset, boundaryOffset + count);
+      if (nodePart !== boundaryPart) {
+        matches = false;
+        return;
+      }
+
+      nodeOffset += count;
+      boundaryOffset += count;
+      if (boundaryOffset === boundary.text.length) {
+        boundaryIndex++;
+        boundaryOffset = 0;
+      }
+    }
+  });
+
+  if (!matches) return false;
+
+  while (boundaryIndex < boundaries.length && boundaries[boundaryIndex].text.length === 0) {
+    boundaryIndex++;
+  }
+
+  return boundaryIndex === boundaries.length && boundaryOffset === 0;
+}
+
+function splitRunsByOriginalBoundaries(
+  runs: Run[],
+  boundaries: OriginalRunBoundary[]
+): ParagraphContent[] | null {
+  const restored: Run[] = [];
+  const cursor = { runIndex: 0, runOffset: 0 };
+
+  for (const boundary of boundaries) {
+    if (boundary.text.length === 0) {
+      restored.push(createEmptyRunFromBoundary(boundary));
+      continue;
+    }
+
+    const run = takeTextRunSlice(runs, cursor, boundary.text.length);
+    if (!run) return null;
+    if (boundary.propertyChanges && boundary.propertyChanges.length > 0) {
+      run.propertyChanges = boundary.propertyChanges;
+    }
+    restored.push(run);
+  }
+
+  while (cursor.runIndex < runs.length) {
+    const remaining = runText(runs[cursor.runIndex]).length - cursor.runOffset;
+    if (remaining > 0) return null;
+    cursor.runIndex++;
+    cursor.runOffset = 0;
+  }
+
+  return restored;
+}
+
+function createEmptyRunFromBoundary(boundary: OriginalRunBoundary): Run {
+  const run: Run = { type: 'run', content: [] };
+  if (boundary.formatting && Object.keys(boundary.formatting).length > 0) {
+    run.formatting = boundary.formatting;
+  }
+  if (boundary.propertyChanges && boundary.propertyChanges.length > 0) {
+    run.propertyChanges = boundary.propertyChanges;
+  }
+  return run;
+}
+
+function takeTextRunSlice(
+  runs: Run[],
+  cursor: { runIndex: number; runOffset: number },
+  length: number
+): Run | null {
+  let remaining = length;
+  let text = '';
+  let formatting: Run['formatting'];
+  let formattingKey: string | undefined;
+
+  while (remaining > 0) {
+    const sourceRun = runs[cursor.runIndex];
+    if (!sourceRun) return null;
+
+    const sourceText = runText(sourceRun);
+    const available = sourceText.length - cursor.runOffset;
+    if (available <= 0) {
+      cursor.runIndex++;
+      cursor.runOffset = 0;
+      continue;
+    }
+
+    const sourceFormattingKey = JSON.stringify(sourceRun.formatting ?? null);
+    if (formattingKey == null) {
+      formatting = sourceRun.formatting;
+      formattingKey = sourceFormattingKey;
+    } else if (formattingKey !== sourceFormattingKey) {
+      return null;
+    }
+
+    const count = Math.min(remaining, available);
+    text += sourceText.slice(cursor.runOffset, cursor.runOffset + count);
+    cursor.runOffset += count;
+    remaining -= count;
+
+    if (cursor.runOffset === sourceText.length) {
+      cursor.runIndex++;
+      cursor.runOffset = 0;
+    }
+  }
+
+  const run: Run = {
+    type: 'run',
+    content: [{ type: 'text', text }],
+  };
+  if (formatting && Object.keys(formatting).length > 0) {
+    run.formatting = formatting;
+  }
+  return run;
 }
 
 /**
