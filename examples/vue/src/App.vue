@@ -12,6 +12,7 @@
         :show-toolbar="true"
         :document-name="fileName"
         :fonts="customFonts"
+        :watermark-presets="['SAMPLE', 'DEMO ONLY', 'PREVIEW', 'NOT FOR DISTRIBUTION']"
         :i18n="editorLocale"
         :color-mode="colorMode"
         @change="handleDocumentChange"
@@ -21,6 +22,7 @@
       >
         <template #title-bar-left>
           <div class="title-bar-left-group">
+            <BrandLogo />
             <span class="switcher" role="tablist" aria-label="Adapter">
               <a :href="reactHref" role="tab" :aria-selected="false" class="pill">React</a>
               <a :href="vueHref" role="tab" :aria-selected="true" class="pill active">Vue</a>
@@ -105,6 +107,7 @@ import { computed, ref, onBeforeUnmount, onMounted } from 'vue';
 import { DocxEditor, type DocxEditorRef } from '@eigenpal/docx-editor-vue';
 import { de as deLocale } from '@eigenpal/docx-editor-i18n';
 import ExampleSwitcher from '../../shared/ExampleSwitcher.vue';
+import BrandLogo from '../../shared/BrandLogo.vue';
 import { createEmptyDocument, findStartPosForParaId } from '@eigenpal/docx-editor-core';
 import type { Document } from '@eigenpal/docx-editor-core/types/document';
 import { setSuggestionMode } from '@eigenpal/docx-editor-core/prosemirror/plugins';

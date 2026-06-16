@@ -39,7 +39,8 @@
       "showZoomControl",
       "style",
       "theme",
-      "toolbarExtra"
+      "toolbarExtra",
+      "watermarkPresets"
     ],
     "deferredInVue": {
       "agentPanel": "AI agent panel UI. Vue adapter ships without the agent surface; React-only until the Vue agent components land.",
@@ -99,6 +100,7 @@
       "getPageContent": "Inherited via EditorRefLike. Identical signature on both adapters.",
       "getSelectionInfo": "Inherited via EditorRefLike. Identical signature on both adapters.",
       "getTotalPages": "Inherited via EditorRefLike. Identical signature on both adapters.",
+      "insertBreak": "Inherited via EditorRefLike. Identical signature on both adapters.",
       "onContentChange": "Inherited via EditorRefLike. Identical signature on both adapters.",
       "onSelectionChange": "Inherited via EditorRefLike. Identical signature on both adapters.",
       "proposeChange": "Inherited via EditorRefLike. Identical signature on both adapters.",

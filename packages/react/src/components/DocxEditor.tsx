@@ -210,6 +210,15 @@ export interface DocxEditorProps {
    * ]}
    */
   fonts?: ReadonlyArray<FontDefinition>;
+  /**
+   * Text-watermark presets shown in the watermark dialog's preset dropdown.
+   * Omit to use the built-in MS Word phrases (`DEFAULT_WATERMARK_PRESETS`:
+   * CONFIDENTIAL, DRAFT, DO NOT COPY, SAMPLE, URGENT, ASAP). Pass an empty
+   * array to hide the preset dropdown and require custom text.
+   *
+   * @example watermarkPresets={['INTERNAL', 'PROPRIETARY', 'COPY']}
+   */
+  watermarkPresets?: readonly string[];
   /** Print options for print preview */
   printOptions?: PrintOptions;
   /**
@@ -432,6 +441,16 @@ export interface DocxEditorRef {
    */
   setParagraphStyle: (options: { paraId: string; styleId: string }) => boolean;
   /**
+   * Insert a page or section break after the paragraph identified by `paraId`.
+   * `'page'` adds a page break; `'sectionNextPage'` / `'sectionContinuous'`
+   * start a new section on a new page / the same page. Direct edit, not a
+   * tracked change. Returns false if paraId is unknown.
+   */
+  insertBreak: (options: {
+    paraId: string;
+    type: 'page' | 'sectionNextPage' | 'sectionContinuous';
+  }) => boolean;
+  /**
    * Read the contents of a single page. 1-indexed; returns null if the page
    * does not exist. Each paragraph is returned with its stable paraId so the
    * agent can comment on or modify it without an extra round-trip.
@@ -581,6 +600,7 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
     showOutlineButton = true,
     fontFamilies,
     fonts,
+    watermarkPresets,
     printOptions: _printOptions,
     onPrint,
     onCopy: _onCopy,
@@ -1056,16 +1076,22 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
     getCachedStyleResolver,
   });
 
-  const { handleFormat, handleInsertTable, handleInsertPageBreak, handleInsertTOC } =
-    useFormattingActions({
-      getActiveEditorView,
-      focusActiveEditor,
-      pagedEditorRef,
-      lastSelectionRef,
-      hyperlinkDialog,
-      historyStateRef,
-      getCachedStyleResolver,
-    });
+  const {
+    handleFormat,
+    handleInsertTable,
+    handleInsertPageBreak,
+    handleInsertSectionBreakNextPage,
+    handleInsertSectionBreakContinuous,
+    handleInsertTOC,
+  } = useFormattingActions({
+    getActiveEditorView,
+    focusActiveEditor,
+    pagedEditorRef,
+    lastSelectionRef,
+    hyperlinkDialog,
+    historyStateRef,
+    getCachedStyleResolver,
+  });
 
   const handleZoomChange = useCallback((zoom: number) => {
     setState((prev) => ({ ...prev, zoom }));
@@ -1667,6 +1693,8 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
             onInsertTable={handleInsertTable}
             onInsertImage={handleInsertImageClick}
             onInsertPageBreak={handleInsertPageBreak}
+            onInsertSectionBreakNextPage={handleInsertSectionBreakNextPage}
+            onInsertSectionBreakContinuous={handleInsertSectionBreakContinuous}
             onInsertTOC={handleInsertTOC}
             onImageWrapType={handleImageWrapType}
             onImageTransform={handleImageTransform}
@@ -1800,6 +1828,7 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
           onWatermarkClose={() => setShowWatermark(false)}
           onWatermarkApply={handleWatermarkApply}
           currentWatermark={currentWatermark}
+          watermarkPresets={watermarkPresets}
           document={history.state}
           footnotePropsOpen={footnotePropsOpen}
           onFootnotePropsClose={() => setFootnotePropsOpen(false)}

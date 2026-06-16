@@ -44,6 +44,8 @@ import { isFloatingTextBoxBlock } from './textBoxFlow';
 import { buildTableRowBreakInfo, snapRowBreak } from './tableRowBreak';
 import { MIN_WRAP_SEGMENT_WIDTH } from '../layout-bridge/measuring/floatingZones';
 import { getParagraphFragmentPmRange } from './paragraphFragmentRange';
+import { balanceTerminalContinuousTextColumns } from './columnBalancing';
+import { getSpacingAfter, getSpacingBefore } from './paragraphSpacing';
 
 // Default page size (US Letter in pixels at 96 DPI)
 const DEFAULT_PAGE_SIZE = { w: 816, h: 1056 };
@@ -105,29 +107,6 @@ export function collectSectionConfigs(
   }
   configs.push(finalConfig);
   return { configs, breakIndices };
-}
-
-function isEmptyParagraph(block: ParagraphBlock): boolean {
-  if (block.runs.length === 0) return true;
-  if (block.runs.length !== 1) return false;
-  const r = block.runs[0];
-  return r.kind === 'text' && ((r as { text?: string }).text ?? '') === '';
-}
-
-/**
- * Word collapses style-inherited spacing on empty paragraphs (only direct
- * formatting survives). `spacingExplicit` tracks which side was set inline.
- */
-function getSpacingBefore(block: ParagraphBlock): number {
-  const value = block.attrs?.spacing?.before ?? 0;
-  if (isEmptyParagraph(block) && !block.attrs?.spacingExplicit?.before) return 0;
-  return value;
-}
-
-function getSpacingAfter(block: ParagraphBlock): number {
-  const value = block.attrs?.spacing?.after ?? 0;
-  if (isEmptyParagraph(block) && !block.attrs?.spacingExplicit?.after) return 0;
-  return value;
 }
 
 /**
@@ -338,12 +317,25 @@ export function layoutDocument(
         // Use the NEXT section's columns; for break type, prefer next section's
         // type but fall back to current break's type (preserves explicit 'continuous')
         const nextType = sectionBreakTypes[sectionIdx + 1] ?? sectionBreakTypes[sectionIdx];
-        handleSectionBreak(
-          block as SectionBreakBlock,
-          paginator,
-          sectionConfigs[sectionIdx + 1] ?? initialConfig,
-          nextType
-        );
+        const nextSectionConfig = sectionConfigs[sectionIdx + 1] ?? initialConfig;
+        handleSectionBreak(block as SectionBreakBlock, paginator, nextSectionConfig, nextType);
+
+        const nextBreakIndex = breakIndices[sectionIdx + 1];
+        const isTerminalSection = nextBreakIndex === undefined;
+        if (
+          isTerminalSection &&
+          (nextType ?? 'nextPage') === 'continuous' &&
+          (nextSectionConfig.columns?.count ?? 1) > 1
+        ) {
+          balanceTerminalContinuousTextColumns({
+            blocks,
+            measures,
+            paginator,
+            start: i + 1,
+            end: blocks.length,
+          });
+        }
+
         sectionIdx++;
         break;
       }
@@ -941,15 +933,31 @@ function handleSectionBreak(
       break;
     }
 
-    case 'continuous':
-      // ECMA-376 §17.6.22: keep current page geometry; defer new size/margins
-      // until the next natural page break. Columns apply immediately below.
-      paginator.updatePageLayout(
-        nextSectionConfig.pageSize,
-        nextSectionConfig.margins,
-        /* applyImmediately */ false
-      );
+    case 'continuous': {
+      // ECMA-376 §17.6.22: a `continuous` break normally keeps the current page
+      // geometry and defers the new size/margins to the next natural page break.
+      // BUT a continuous break that changes page size or orientation cannot
+      // share a physical sheet with the preceding section, so Word and
+      // LibreOffice promote it to a page break. Match that: if the next
+      // section's page size differs from the current page's, force the break.
+      const currentSize = paginator.getCurrentState().page.size;
+      const nextSize = nextSectionConfig.pageSize;
+      const pageSizeChanges =
+        nextSize != null &&
+        (Math.round(nextSize.w) !== Math.round(currentSize.w) ||
+          Math.round(nextSize.h) !== Math.round(currentSize.h));
+      if (pageSizeChanges) {
+        paginator.updatePageLayout(nextSectionConfig.pageSize, nextSectionConfig.margins);
+        paginator.forcePageBreak();
+      } else {
+        paginator.updatePageLayout(
+          nextSectionConfig.pageSize,
+          nextSectionConfig.margins,
+          /* applyImmediately */ false
+        );
+      }
       break;
+    }
   }
 
   // Update column layout for the next section
