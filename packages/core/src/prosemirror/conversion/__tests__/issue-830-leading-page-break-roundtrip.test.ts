@@ -55,6 +55,27 @@ describe('issue #830 leading hard page break round-trip', () => {
     expect(xml).toMatch(/<w:r[^>]*><w:lastRenderedPageBreak\/><w:t>After hard break/);
   });
 
+  test('preserves a break-only paragraph with no direct formatting', () => {
+    const leadingBreakParagraph: Paragraph = {
+      type: 'paragraph',
+      content: [{ type: 'run', content: [{ type: 'break', breakType: 'page' }] }],
+    };
+
+    const pmDoc = toProseDoc(docOf(leadingBreakParagraph));
+    expect(childTypes(pmDoc)).toEqual(['paragraph']);
+    expect(pmDoc.child(0).attrs.pageBreakBefore).toBe(true);
+
+    const roundTripped = fromProseDoc(pmDoc, docOf(leadingBreakParagraph));
+    const outputParagraph = roundTripped.package.document.content[0];
+    expect(outputParagraph?.type).toBe('paragraph');
+    if (outputParagraph?.type !== 'paragraph') {
+      throw new Error('Expected body block to remain a paragraph');
+    }
+
+    const xml = serializeParagraph(outputParagraph);
+    expect(xml).toContain('<w:pageBreakBefore/>');
+  });
+
   test('keeps non-leading hard page breaks as explicit PM page break blocks', () => {
     const midParagraph: Paragraph = {
       type: 'paragraph',
