@@ -9,6 +9,9 @@ export function addRepeatingSectionItem(doc: Document_2, filter: ContentControlF
     afterIndex?: number;
 }): Document_2;
 
+// @public (undocumented)
+export function addStyleDefinition(styleDefinitions: StyleDefinitions | undefined, style: Style): StyleDefinitions;
+
 // @public
 export type AgentCommand = InsertTextCommand | ReplaceTextCommand | DeleteTextCommand | FormatTextCommand | FormatParagraphCommand | ApplyStyleCommand | InsertTableCommand | InsertImageCommand | InsertHyperlinkCommand | RemoveHyperlinkCommand | InsertParagraphBreakCommand | MergeParagraphsCommand | SplitParagraphCommand | SetVariableCommand | ApplyVariablesCommand;
 
@@ -67,6 +70,9 @@ export interface ApplyStyleCommand extends BaseCommand {
     type: 'applyStyle';
 }
 
+// @public (undocumented)
+export function applyStyleOverrides(styleDefinitions: StyleDefinitions | undefined, overrides: StyleOverrides | null | undefined): StyleDefinitions | undefined;
+
 // @public
 export interface ApplyVariablesCommand extends BaseCommand {
     // (undocumented)
@@ -94,6 +100,9 @@ export function buildSelectionContext(doc: Document_2, range: Range_2, options?:
 
 // @public
 export function buildSelectionContextFromContext(doc: Document_2, range: Range_2, options?: ContextSelectionOptions): SelectionContext;
+
+// @public (undocumented)
+export function cloneStyleDefinitions(styleDefinitions: StyleDefinitions): StyleDefinitions;
 
 // @public
 export function colorsEqual(color1: ColorValue | undefined | null, color2: ColorValue | undefined | null, theme: Theme | null | undefined): boolean;
@@ -328,6 +337,7 @@ export { Document_2 as Document }
 // @public
 export class DocumentAgent {
     constructor(source: Document_2 | ArrayBuffer);
+    addStyle(style: Style): DocumentAgent;
     applyFormatting(range: Range_2, formatting: Partial<TextFormatting>): DocumentAgent;
     applyParagraphFormatting(paragraphIndex: number, formatting: Partial<ParagraphFormatting>): DocumentAgent;
     applyStyle(paragraphIndex: number, styleId: string): DocumentAgent;
@@ -344,6 +354,7 @@ export class DocumentAgent {
     getPageCount(): number;
     getParagraphCount(): number;
     getPendingVariables(): Record<string, string>;
+    getStyleDefinitions(): StyleDefinitions | undefined;
     getStyles(): StyleInfo[];
     getTableCount(): number;
     getText(): string;
@@ -363,6 +374,8 @@ export class DocumentAgent {
     toBuffer(options?: {
         selective?: SelectiveSaveOptions;
     }): Promise<ArrayBuffer>;
+    updateDocDefaults(patch: Partial<DocDefaults>): DocumentAgent;
+    updateStyle(styleId: string, patch: StyleDefinitionPatch): DocumentAgent;
 }
 
 // @public
@@ -577,6 +590,9 @@ export function hasHyperlinks(body: DocumentBody): boolean;
 
 // @public
 export function hasImages(body: DocumentBody): boolean;
+
+// @public
+export function hasStyleDefinitionUpdates(styleDefinitions: StyleDefinitions | null | undefined, originalStylesXml?: string | null): boolean;
 
 // @public
 export function hasTables(body: DocumentBody): boolean;
@@ -1295,6 +1311,9 @@ export function serializeDocx(doc: Document_2): string;
 // @public
 export function serializeSectionProperties(props: SectionProperties | undefined): string;
 
+// @public (undocumented)
+export function serializeStyles(originalStylesXml: string | undefined, styleDefinitions: StyleDefinitions): string;
+
 // @public
 export function setContentControlContent(doc: Document_2, filter: ContentControlFilter, replacement: string | BlockContent[], options?: {
     force?: boolean;
@@ -1332,7 +1351,7 @@ export interface Style {
     styleId: string;
     tblPr?: TableFormatting;
     tblStylePr?: Array<{
-        type: 'band1Horz' | 'band1Vert' | 'band2Horz' | 'band2Vert' | 'firstCol' | 'firstRow' | 'lastCol' | 'lastRow' | 'neCell' | 'nwCell' | 'seCell' | 'swCell';
+        type: 'band1Horz' | 'band1Vert' | 'band2Horz' | 'band2Vert' | 'firstCol' | 'firstRow' | 'lastCol' | 'lastRow' | 'neCell' | 'nwCell' | 'seCell' | 'swCell' | 'wholeTable';
         pPr?: ParagraphFormatting;
         rPr?: TextFormatting;
         tblPr?: TableFormatting;
@@ -1346,9 +1365,20 @@ export interface Style {
     unhideWhenUsed?: boolean;
 }
 
+// @public (undocumented)
+export interface StyleDefinitionPatch extends Partial<Omit<Style, 'styleId'>> {
+    alignment?: ParagraphFormatting['alignment'];
+    bold?: boolean;
+    color?: string | ColorValue;
+    fontSize?: number;
+    italic?: boolean;
+    styleId?: string;
+}
+
 // @public
 export interface StyleDefinitions {
     docDefaults?: DocDefaults;
+    docDefaultsModified?: boolean;
     latentStyles?: {
         defLockedState?: boolean;
         defUIPriority?: number;
@@ -1357,6 +1387,7 @@ export interface StyleDefinitions {
         defQFormat?: boolean;
         count?: number;
     };
+    modifiedStyleIds?: string[];
     styles: Style[];
 }
 
@@ -1367,6 +1398,9 @@ export interface StyleInfo {
     name: string;
     type: 'paragraph' | 'character' | 'table';
 }
+
+// @public (undocumented)
+export type StyleOverrides = Record<string, StyleDefinitionPatch | null | undefined>;
 
 // @public
 export interface SuggestedAction {
@@ -1406,6 +1440,9 @@ export interface TableRow {
     // (undocumented)
     type: 'tableRow';
 }
+
+// @public
+export type TableStyleCondition = NonNullable<Style['tblStylePr']>[number];
 
 // @public
 export interface TemplateError {
@@ -1495,8 +1532,14 @@ export function twipsToEmu(twips: number): number;
 // @public
 export function twipsToPixels(twips: number): number;
 
+// @public (undocumented)
+export function updateDocDefaults(styleDefinitions: StyleDefinitions | undefined, patch: Partial<DocDefaults>): StyleDefinitions;
+
 // @public
 export function updateMultipleFiles(originalBuffer: ArrayBuffer, updates: Map<string, string | ArrayBuffer>, options?: RepackOptions): Promise<ArrayBuffer>;
+
+// @public (undocumented)
+export function updateStyleDefinition(styleDefinitions: StyleDefinitions | undefined, styleId: string, patch: StyleDefinitionPatch): StyleDefinitions;
 
 // @public
 export function validatePatchSafety(originalXml: string, serializedXml: string, changedIds: Set<string>): PatchValidationResult;

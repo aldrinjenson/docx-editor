@@ -11,7 +11,7 @@
 
 import { useRef, useCallback, useState, useEffect, useMemo, forwardRef } from 'react';
 import type { CSSProperties, ReactNode } from 'react';
-import type { Document, Theme } from '@eigenpal/docx-editor-core/types/document';
+import type { Document, Theme, StyleDefinitions } from '@eigenpal/docx-editor-core/types/document';
 
 import { cn } from '../lib/utils';
 import { type SelectionFormatting } from './Toolbar';
@@ -42,6 +42,7 @@ import { DocxEditorToolbar } from './DocxEditor/DocxEditorToolbar';
 import { DocxEditorPagedArea } from './DocxEditor/DocxEditorPagedArea';
 import { ContentControlWidgets } from './DocxEditor/ContentControlWidgets';
 import { useResetEditorState } from './DocxEditor/hooks/useResetEditorState';
+import { useStyleDefinitions } from './DocxEditor/hooks/useStyleDefinitions';
 import { DocxEditorShell } from './DocxEditor/DocxEditorShell';
 import type { FontOption } from './ui/FontPicker';
 import { OUTLINE_BUTTON_RESERVED_SPACE, OUTLINE_RESERVED_SPACE } from './DocumentOutline';
@@ -59,6 +60,7 @@ import { useFindReplace } from './dialogs/FindReplaceDialog';
 import { useHyperlinkDialog } from './dialogs/HyperlinkDialog';
 import { type InlineHeaderFooterEditorRef } from './InlineHeaderFooterEditor';
 import { DocumentAgent } from '@eigenpal/docx-editor-core/agent';
+import type { StyleDefinitionPatch, StyleOverrides } from '@eigenpal/docx-editor-core/docx';
 import { DefaultLoadingIndicator, DefaultPlaceholder, ParseError } from './DocxEditorHelpers';
 import { type DocxInput } from '@eigenpal/docx-editor-core/utils';
 import type { FontDefinition } from '@eigenpal/docx-editor-core/utils';
@@ -152,6 +154,19 @@ export interface DocxEditorProps {
   colorMode?: 'light' | 'dark' | 'system';
   /** Document theme schema object */
   theme?: Theme | null;
+  /**
+   * Declarative style overrides applied to the loaded document style package.
+   * Keys are style IDs (for example `Heading1`) and values are merged into the
+   * matching style definition.
+   */
+  styleOverrides?: StyleOverrides;
+  /**
+   * Controlled full style package. Use with collaboration/persistence layers
+   * that keep `document.package.styles` outside the body PM document.
+   */
+  styleDefinitions?: StyleDefinitions | null;
+  /** Fires when the editor mutates the controlled style package. */
+  onStyleDefinitionsChange?: (styles: StyleDefinitions) => void;
   /** Whether to show toolbar (default: true) */
   showToolbar?: boolean;
   /**
@@ -328,6 +343,8 @@ export interface DocxEditorRef {
   getDocument: () => Document | null;
   /** Get the editor ref */
   getEditorRef: () => PagedEditorRef | null;
+  /** Merge a style definition update and refresh the rendered document. */
+  updateStyle: (styleId: string, patch: StyleDefinitionPatch) => StyleDefinitions | null;
   /** Save the document to buffer. Pass { selective: false } to force full repack. */
   save: (options?: { selective?: boolean }) => Promise<ArrayBuffer | null>;
   /** Set zoom level */
@@ -595,6 +612,9 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
     onFontsLoaded: onFontsLoadedCallback,
     colorMode = 'light',
     theme,
+    styleOverrides,
+    styleDefinitions,
+    onStyleDefinitionsChange,
     showToolbar = true,
     showFileOpen = true,
     showZoomControl = true,
@@ -886,6 +906,20 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
     cleanOrphanedCommentsTimerRef,
   });
 
+  const handleDocumentChangeRef = useRef<(doc: Document) => void>(() => {});
+  const { prepareLoadedDocument, updateStyle: handleUpdateStyle } = useStyleDefinitions({
+    initialStyles: initialDocument?.package.styles,
+    styleDefinitions,
+    styleOverrides,
+    onStyleDefinitionsChange,
+    history,
+    historyStateRef,
+    agentRef,
+    pagedEditorRef,
+    styleResolverCacheRef,
+    handleDocumentChangeRef,
+  });
+
   const { loadParsedDocument, loadBuffer } = useDocumentLoader({
     documentBuffer,
     initialDocument,
@@ -902,6 +936,7 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
     resetForNewDocument,
     commentsLoadedRef,
     commentIdAllocator: commentIdAllocatorRef.current,
+    prepareDocument: prepareLoadedDocument,
   });
 
   const {
@@ -1004,6 +1039,8 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
     },
     [onChange, pushDocument, cleanOrphanedComments]
   );
+
+  handleDocumentChangeRef.current = handleDocumentChange;
 
   // Recompute the floating "add comment" button position from the current PM
   // selection + page/container geometry. Called from handleSelectionChange and
@@ -1250,6 +1287,7 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
     document: history.state,
     historyStateRef,
     pagedEditorRef,
+    updateStyle: handleUpdateStyle,
     handleSave,
     handleDirectPrint,
     zoom: state.zoom,
@@ -1516,11 +1554,6 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
     // The outline toggle/panel inset past the vertical ruler when it's shown,
     // so the page must clear that extra width too.
     (showRuler && (showOutline || showOutlineButton) ? RULER_WIDTH : 0);
-  // Reserve against the WIDEST page in the doc, not the portrait default: pages
-  // center via `alignItems:center`, so a landscape section (wider than
-  // DEFAULT_PAGE_WIDTH) gets a smaller side margin and, with the old default,
-  // slid left under the outline toggle/panel. Taking the max across all section
-  // widths also covers mixed-orientation docs.
   const docBody = history.state?.package?.document;
   const sectionPageWidths = [
     docBody?.finalSectionProperties?.pageWidth,
@@ -1548,14 +1581,6 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
     return ids;
   }, [comments]);
 
-  // PagedEditor onSelectionChange — runs on every selection movement.
-  // Extracts the full selection state for the host callback, then walks the
-  // marks at the cursor to detect comment / tracked-change marks so the
-  // matching sidebar card opens. Comment marks are reported by either
-  // $from.marks() or by storedMarks/nodeBefore/nodeAfter at boundaries; the
-  // four sources get unioned. Resolved comments stay collapsed unless the
-  // user explicitly clicks them, so the sidebar doesn't fill with old
-  // threads as the cursor sweeps through commented text.
   const handlePagedSelectionChange = useCallback(() => {
     const view = pagedEditorRef.current?.getView();
     if (!view) {
@@ -1607,11 +1632,6 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
     setExpandedSidebarItem(cursorSidebarItem);
   }, [handleSelectionChange, resolvedCommentIds, commentSidebarItems, revisionIdAliases]);
 
-  // Auto-open the sidebar the first time a comment or tracked-change card
-  // is produced — covers the case where the user inserts an empty tracked
-  // table: no cursor anchor exists yet (no inline marks at cursor), so the
-  // cursor-driven open above doesn't fire. Latches via a ref so a later
-  // manual close stays closed.
   useEffect(() => {
     if (sidebarAutoOpenedRef.current) return;
     if (commentSidebarItems.length === 0) return;
@@ -1973,9 +1993,5 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
     />
   );
 });
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
 
 export default DocxEditor;

@@ -18,6 +18,17 @@ export { parseDocx } from './parser';
 export { repackDocx, createDocx, updateMultipleFiles } from './rezip';
 export { attemptSelectiveSave } from './selectiveSave';
 export { buildPatchedDocumentXml, validatePatchSafety } from './selectiveXmlPatch';
+export {
+  addStyleDefinition,
+  applyStyleOverrides,
+  cloneStyleDefinitions,
+  updateDocDefaults,
+  updateStyleDefinition,
+  type StyleDefinitionPatch,
+  type StyleOverrides,
+  type TableStyleCondition,
+} from './styleDefinitions';
+export { hasStyleDefinitionUpdates, serializeStyles } from './serializer/styleSerializer';
 
 // Image / drawing
 export {

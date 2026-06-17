@@ -33,6 +33,7 @@ export function useDocumentLoader({
   resetForNewDocument,
   commentsLoadedRef,
   commentIdAllocator,
+  prepareDocument,
 }: {
   documentBuffer: DocxInput | null | undefined;
   initialDocument: Document | null | undefined;
@@ -52,6 +53,8 @@ export function useDocumentLoader({
   commentsLoadedRef: React.RefObject<boolean>;
   // Per-editor-instance ID allocator; seeded above the loaded doc's max ID.
   commentIdAllocator: CommentIdAllocator;
+  /** Optional hook for applying controlled document-level state before load. */
+  prepareDocument?: (doc: Document) => Document;
 }) {
   // Monotonically increasing generation counter so a late `parseDocx`
   // result doesn't overwrite a newer load that started while we were
@@ -60,14 +63,15 @@ export function useDocumentLoader({
 
   const loadParsedDocument = useCallback(
     (doc: Document) => {
+      const preparedDoc = prepareDocument?.(doc) ?? doc;
       resetForNewDocument();
-      history.reset(doc);
+      history.reset(preparedDoc);
       setLoadingState({ isLoading: false, parseError: null });
-      loadDocumentFonts(doc).catch((err) => {
+      loadDocumentFonts(preparedDoc).catch((err) => {
         console.warn('Failed to load document fonts:', err);
       });
     },
-    [resetForNewDocument, history, setLoadingState]
+    [resetForNewDocument, history, setLoadingState, prepareDocument]
   );
 
   const loadBuffer = useCallback(

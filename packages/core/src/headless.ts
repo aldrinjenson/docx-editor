@@ -161,6 +161,17 @@ export { repackDocx, createDocx, updateMultipleFiles } from './docx/rezip';
 export { getDocumentWatermark, setDocumentWatermark } from './docx/watermarkApi';
 export { attemptSelectiveSave } from './docx/selectiveSave';
 export { buildPatchedDocumentXml, validatePatchSafety } from './docx/selectiveXmlPatch';
+export {
+  addStyleDefinition,
+  applyStyleOverrides,
+  cloneStyleDefinitions,
+  updateDocDefaults,
+  updateStyleDefinition,
+  type StyleDefinitionPatch,
+  type StyleOverrides,
+  type TableStyleCondition,
+} from './docx/styleDefinitions';
+export { serializeStyles, hasStyleDefinitionUpdates } from './docx/serializer/styleSerializer';
 
 // ============================================================================
 // TEMPLATE PROCESSING

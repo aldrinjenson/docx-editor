@@ -29,6 +29,9 @@ import { ReactNode } from 'react';
 import { RenderedDomContext } from '@eigenpal/docx-editor-core/plugin-api';
 import { SelectionState } from '@eigenpal/docx-editor-core/prosemirror';
 import { SidebarItem } from '@eigenpal/docx-editor-core/plugin-api';
+import { StyleDefinitionPatch } from '@eigenpal/docx-editor-core/docx';
+import { StyleDefinitions } from '@eigenpal/docx-editor-core/types/document';
+import { StyleOverrides } from '@eigenpal/docx-editor-core/docx';
 import { TFunction } from '@eigenpal/docx-editor-i18n';
 import { Theme } from '@eigenpal/docx-editor-core/types/document';
 import { Transaction } from 'prosemirror-state';
@@ -90,6 +93,7 @@ export interface DocxEditorProps {
     onRenderedDomContextReady?: (context: RenderedDomContext) => void;
     onSave?: (buffer: ArrayBuffer) => void;
     onSelectionChange?: (state: SelectionState | null) => void;
+    onStyleDefinitionsChange?: (styles: StyleDefinitions) => void;
     placeholder?: ReactNode;
     pluginOverlays?: ReactNode;
     pluginRenderedDomContext?: RenderedDomContext | null;
@@ -107,6 +111,8 @@ export interface DocxEditorProps {
     showToolbar?: boolean;
     showZoomControl?: boolean;
     style?: CSSProperties;
+    styleDefinitions?: StyleDefinitions | null;
+    styleOverrides?: StyleOverrides;
     theme?: Theme | null;
     toolbarExtra?: ReactNode;
     watermarkPresets?: readonly string[];
@@ -219,6 +225,7 @@ export interface DocxEditorRef {
         styleId: string;
     }) => boolean;
     setZoom: (zoom: number) => void;
+    updateStyle: (styleId: string, patch: StyleDefinitionPatch) => StyleDefinitions | null;
 }
 
 // @public

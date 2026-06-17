@@ -39,6 +39,11 @@
 import JSZip from 'jszip';
 import type { Document } from '../types/document';
 import { serializeDocument } from './serializer/documentSerializer';
+import {
+  ensureStylesContentType,
+  hasStyleDefinitionUpdates,
+  serializeStyles,
+} from './serializer/styleSerializer';
 import { type RawDocxContent } from './unzip';
 import { escapeXml } from './serializer/xmlUtils';
 
@@ -49,6 +54,7 @@ import {
   getContentTypeForExtension,
 } from './rezip/images';
 import { processNewHyperlinks } from './rezip/hyperlinks';
+import { RELATIONSHIP_TYPES } from './relsParser';
 import {
   ensureHeaderFooterParts,
   serializeCommentsToZip,
@@ -83,6 +89,58 @@ export interface RepackOptions {
   updateModifiedDate?: boolean;
   /** Custom modifier name for lastModifiedBy */
   modifiedBy?: string;
+}
+
+async function ensureStylesPackageEntries(zip: JSZip, compressionLevel: number): Promise<void> {
+  const contentTypesPath = '[Content_Types].xml';
+  const contentTypesFile = zip.file(contentTypesPath);
+  if (contentTypesFile) {
+    const contentTypesXml = await contentTypesFile.async('text');
+    const updatedContentTypesXml = ensureStylesContentType(contentTypesXml);
+    if (updatedContentTypesXml !== contentTypesXml) {
+      zip.file(contentTypesPath, updatedContentTypesXml, {
+        compression: 'DEFLATE',
+        compressionOptions: { level: compressionLevel },
+      });
+    }
+  }
+
+  const relsPath = 'word/_rels/document.xml.rels';
+  const relsFile = zip.file(relsPath);
+  if (!relsFile) return;
+
+  const relsXml = await relsFile.async('text');
+  if (relsXml.includes(RELATIONSHIP_TYPES.styles) || relsXml.includes('Target="styles.xml"')) {
+    return;
+  }
+
+  const relationshipXml = `<Relationship Id="rId${findMaxRId(relsXml) + 1}" Type="${RELATIONSHIP_TYPES.styles}" Target="styles.xml"/>`;
+  const updatedRelsXml = relsXml.replace('</Relationships>', `${relationshipXml}</Relationships>`);
+  zip.file(relsPath, updatedRelsXml, {
+    compression: 'DEFLATE',
+    compressionOptions: { level: compressionLevel },
+  });
+}
+
+async function serializeStylesToZip(
+  doc: Document,
+  zip: JSZip,
+  originalStylesXml: string | undefined | null,
+  compressionLevel: number
+): Promise<void> {
+  const styleDefinitions = doc.package.styles;
+  if (!styleDefinitions) return;
+  if (!hasStyleDefinitionUpdates(styleDefinitions, originalStylesXml)) return;
+
+  const stylesXml = serializeStyles(originalStylesXml ?? undefined, styleDefinitions);
+  zip.file('word/styles.xml', stylesXml, {
+    compression: 'DEFLATE',
+    compressionOptions: { level: compressionLevel },
+  });
+
+  if (!originalStylesXml) {
+    await ensureStylesPackageEntries(zip, compressionLevel);
+  }
 }
 
 /**
@@ -142,6 +200,9 @@ export async function repackDocx(doc: Document, options: RepackOptions = {}): Pr
     compression: 'DEFLATE',
     compressionOptions: { level: compressionLevel },
   });
+
+  const originalStylesXml = await originalZip.file('word/styles.xml')?.async('text');
+  await serializeStylesToZip(exportDocument, newZip, originalStylesXml, compressionLevel);
 
   // Serialize and update modified headers/footers
   serializeHeadersFootersToZip(exportDocument, newZip, compressionLevel);
@@ -232,6 +293,8 @@ export async function repackDocxFromRaw(
     compression: 'DEFLATE',
     compressionOptions: { level: compressionLevel },
   });
+
+  await serializeStylesToZip(exportDocument, newZip, rawContent.stylesXml, compressionLevel);
 
   // Serialize and update modified headers/footers
   serializeHeadersFootersToZip(exportDocument, newZip, compressionLevel);

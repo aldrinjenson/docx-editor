@@ -21,6 +21,8 @@ import type {
   TextFormatting,
   ParagraphFormatting,
   Style,
+  StyleDefinitions,
+  DocDefaults,
   Hyperlink,
 } from '../types/document';
 
@@ -40,6 +42,12 @@ import { attemptSelectiveSave, type SelectiveSaveOptions } from '../docx/selecti
 import { detectVariables } from '../utils/variableDetector';
 import { parseDocx } from '../docx/parser';
 import type { DocxInput } from '../utils/docxInput';
+import {
+  addStyleDefinition,
+  updateDocDefaults,
+  updateStyleDefinition,
+  type StyleDefinitionPatch,
+} from '../docx/styleDefinitions';
 
 // ============================================================================
 // TYPES
@@ -230,19 +238,26 @@ export class DocumentAgent {
 
     const styleInfos: StyleInfo[] = [];
 
-    for (const [styleId, style] of Object.entries(styleDefinitions.styles)) {
-      if (typeof style === 'object' && style !== null) {
-        const styleObj = style as Style;
-        styleInfos.push({
-          id: styleId,
-          name: styleObj.name || styleId,
-          type: styleObj.type === 'numbering' ? 'paragraph' : styleObj.type || 'paragraph',
-          builtIn: styleObj.default, // Use default property as proxy for built-in
-        });
-      }
+    for (const styleObj of styleDefinitions.styles) {
+      styleInfos.push({
+        id: styleObj.styleId,
+        name: styleObj.name || styleObj.styleId,
+        type: styleObj.type === 'numbering' ? 'paragraph' : styleObj.type || 'paragraph',
+        builtIn: styleObj.default, // Use default property as proxy for built-in
+      });
     }
 
     return styleInfos;
+  }
+
+  /**
+   * Get the document's editable style package.
+   *
+   * The returned object mirrors `word/styles.xml`: docDefaults, latent styles,
+   * paragraph/character/table styles, basedOn links, and table conditionals.
+   */
+  getStyleDefinitions(): StyleDefinitions | undefined {
+    return this._document.package.styles;
   }
 
   /**
@@ -462,6 +477,51 @@ export class DocumentAgent {
       formatting,
     };
     return this._executeCommand(command);
+  }
+
+  /**
+   * Merge style properties into a style definition by style ID.
+   *
+   * This is framework-agnostic and works without an EditorView. The updated
+   * style package is serialized back into `word/styles.xml` on export.
+   */
+  updateStyle(styleId: string, patch: StyleDefinitionPatch): DocumentAgent {
+    const styles = updateStyleDefinition(this._document.package.styles, styleId, patch);
+    return this._withDocument({
+      ...this._document,
+      package: {
+        ...this._document.package,
+        styles,
+      },
+    });
+  }
+
+  /**
+   * Add or replace a style definition.
+   */
+  addStyle(style: Style): DocumentAgent {
+    const styles = addStyleDefinition(this._document.package.styles, style);
+    return this._withDocument({
+      ...this._document,
+      package: {
+        ...this._document.package,
+        styles,
+      },
+    });
+  }
+
+  /**
+   * Merge document defaults into the style package.
+   */
+  updateDocDefaults(patch: Partial<DocDefaults>): DocumentAgent {
+    const styles = updateDocDefaults(this._document.package.styles, patch);
+    return this._withDocument({
+      ...this._document,
+      package: {
+        ...this._document.package,
+        styles,
+      },
+    });
   }
 
   // ==========================================================================
@@ -727,6 +787,12 @@ export class DocumentAgent {
    */
   private _executeCommand(command: AgentCommand): DocumentAgent {
     const newAgent = new DocumentAgent(executeCommand(this._document, command));
+    newAgent._pendingVariables = { ...this._pendingVariables };
+    return newAgent;
+  }
+
+  private _withDocument(document: Document): DocumentAgent {
+    const newAgent = new DocumentAgent(document);
     newAgent._pendingVariables = { ...this._pendingVariables };
     return newAgent;
   }

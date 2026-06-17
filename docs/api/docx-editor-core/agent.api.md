@@ -206,6 +206,7 @@ export interface DeleteTextCommand extends BaseCommand {
 // @public
 export class DocumentAgent {
     constructor(source: Document_2 | ArrayBuffer);
+    addStyle(style: Style): DocumentAgent;
     applyFormatting(range: Range_2, formatting: Partial<TextFormatting>): DocumentAgent;
     applyParagraphFormatting(paragraphIndex: number, formatting: Partial<ParagraphFormatting>): DocumentAgent;
     applyStyle(paragraphIndex: number, styleId: string): DocumentAgent;
@@ -222,6 +223,7 @@ export class DocumentAgent {
     getPageCount(): number;
     getParagraphCount(): number;
     getPendingVariables(): Record<string, string>;
+    getStyleDefinitions(): StyleDefinitions | undefined;
     getStyles(): StyleInfo[];
     getTableCount(): number;
     getText(): string;
@@ -241,6 +243,8 @@ export class DocumentAgent {
     toBuffer(options?: {
         selective?: SelectiveSaveOptions;
     }): Promise<ArrayBuffer>;
+    updateDocDefaults(patch: Partial<DocDefaults>): DocumentAgent;
+    updateStyle(styleId: string, patch: StyleDefinitionPatch): DocumentAgent;
 }
 
 // @public

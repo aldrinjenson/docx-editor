@@ -10,7 +10,7 @@
 
 import type { Plugin } from 'prosemirror-state';
 import type { EditorView } from 'prosemirror-view';
-import type { Document, Theme } from '@eigenpal/docx-editor-core/types/document';
+import type { Document, Theme, StyleDefinitions } from '@eigenpal/docx-editor-core/types/document';
 import type { Comment } from '@eigenpal/docx-editor-core/types/content';
 import type { SelectionState } from '@eigenpal/docx-editor-core/prosemirror';
 import type { DocxInput } from '@eigenpal/docx-editor-core/utils';
@@ -21,6 +21,7 @@ import type { EditorRefLike } from '@eigenpal/docx-editor-agents/bridge';
 import type { PMContentControl } from '@eigenpal/docx-editor-core/prosemirror';
 import type { ContentControlFilter, ContentControlValue } from '@eigenpal/docx-editor-core/agent';
 import type { Translations } from '@eigenpal/docx-editor-i18n';
+import type { StyleDefinitionPatch, StyleOverrides } from '@eigenpal/docx-editor-core/docx';
 
 export type EditorMode = 'editing' | 'suggesting' | 'viewing';
 
@@ -52,6 +53,12 @@ export interface DocxEditorProps {
   i18n?: Translations;
   /** Theme override used for toolbar color palettes when the document has no theme. */
   theme?: Theme | null;
+  /** Declarative style overrides keyed by style ID. */
+  styleOverrides?: StyleOverrides;
+  /** Controlled full style package, useful for collaboration/persistence layers. */
+  styleDefinitions?: StyleDefinitions | null;
+  /** Called when the editor mutates the controlled style package. */
+  onStyleDefinitionsChange?: (styles: StyleDefinitions) => void;
   /** Color theme mode for UI styling. `'system'` follows the OS preference. */
   colorMode?: 'light' | 'dark' | 'system';
   /** External ProseMirror plugins supplied by the host app. */
@@ -131,6 +138,8 @@ export type DocxEditorRef = EditorRefLike & {
   getAgent(): null;
   /** Save the document and return DOCX bytes, matching React's component ref. */
   save(): Promise<ArrayBuffer | null>;
+  /** Merge a style definition update and refresh the rendered document. */
+  updateStyle(styleId: string, patch: StyleDefinitionPatch): StyleDefinitions | null;
   /** Set zoom level (1.0 = 100%). */
   setZoom(zoom: number): void;
   /** Get current zoom level. */

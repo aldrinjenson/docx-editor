@@ -549,6 +549,7 @@ const {
   syncHfPMs,
   setHfTransactionListener,
   setDocument,
+  updateStyle,
 } = useDocxEditor({
   hiddenContainer: hiddenPmRef,
   pagesContainer: pagesRef,
@@ -557,6 +558,9 @@ const {
   syncCoordinator,
   editorMode,
   author: authorRef,
+  styleOverrides: computed(() => props.styleOverrides),
+  styleDefinitions: computed(() => props.styleDefinitions),
+  onStyleDefinitionsChange: props.onStyleDefinitionsChange,
   onChange: (doc) => {
     emit('change', doc);
     emit('update:document', doc);
@@ -1117,10 +1121,6 @@ onBeforeUnmount(() => {
   clearOverlay();
 });
 
-// Ref-API assembly — single source of truth for the surface
-// described by `DocxEditorRef`. `satisfies DocxEditorRef` lives
-// inside `useDocxEditorRefApi` so signature drift is caught at
-// composable-build time.
 const { exposed } = useDocxEditorRefApi({
   editorView,
   layout,
@@ -1135,6 +1135,7 @@ const { exposed } = useDocxEditorRefApi({
   save,
   loadDocument,
   loadDocumentBuffer,
+  updateStyle,
   addComment,
   replyToComment,
   resolveComment,

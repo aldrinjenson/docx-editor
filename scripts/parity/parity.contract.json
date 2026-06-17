@@ -29,6 +29,7 @@
       "onModeChange",
       "onPrint",
       "onSelectionChange",
+      "onStyleDefinitionsChange",
       "readOnly",
       "renderLogo",
       "renderTitleBarRight",
@@ -38,6 +39,8 @@
       "showToolbar",
       "showZoomControl",
       "style",
+      "styleDefinitions",
+      "styleOverrides",
       "theme",
       "toolbarExtra",
       "watermarkPresets"
@@ -89,7 +92,8 @@
       "scrollToPosition",
       "setContentControlContent",
       "setContentControlValue",
-      "setZoom"
+      "setZoom",
+      "updateStyle"
     ],
     "pairedViaInheritance": {
       "addComment": "Inherited via EditorRefLike. Identical signature on both adapters.",

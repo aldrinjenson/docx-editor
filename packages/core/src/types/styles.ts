@@ -81,7 +81,8 @@ export interface Style {
       | 'neCell'
       | 'nwCell'
       | 'seCell'
-      | 'swCell';
+      | 'swCell'
+      | 'wholeTable';
     pPr?: ParagraphFormatting;
     rPr?: TextFormatting;
     tblPr?: TableFormatting;
@@ -117,6 +118,14 @@ export interface StyleDefinitions {
   };
   /** Style definitions */
   styles: Style[];
+  /**
+   * Style IDs changed through the style-definition API. Export code uses this
+   * to patch only those `<w:style>` elements in `styles.xml`, preserving
+   * unmodeled children on untouched styles.
+   */
+  modifiedStyleIds?: string[];
+  /** Whether docDefaults were changed through the style-definition API. */
+  docDefaultsModified?: boolean;
 }
 
 // ============================================================================

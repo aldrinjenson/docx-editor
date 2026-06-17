@@ -16,7 +16,7 @@
 
 import type { Ref, ShallowRef } from 'vue';
 import type { EditorView } from 'prosemirror-view';
-import type { Document } from '@eigenpal/docx-editor-core/types/document';
+import type { Document, StyleDefinitions } from '@eigenpal/docx-editor-core/types/document';
 import type { Comment } from '@eigenpal/docx-editor-core/types/content';
 import type { DocxInput } from '@eigenpal/docx-editor-core/utils';
 import type { Layout } from '@eigenpal/docx-editor-core/layout-engine';
@@ -49,6 +49,7 @@ import {
 import { TextSelection } from 'prosemirror-state';
 import type { DocxEditorRef } from '../components/DocxEditor/types';
 import type { ApplyFormattingOptions } from './useFormattingActions';
+import type { StyleDefinitionPatch } from '@eigenpal/docx-editor-core/docx';
 
 export interface UseDocxEditorRefApiOptions {
   // Foundational refs / accessors (useDocxEditor)
@@ -63,6 +64,7 @@ export interface UseDocxEditorRefApiOptions {
   destroy: () => void;
   getDocument: () => Document | null;
   setZoom: (zoom: number) => void;
+  updateStyle: (styleId: string, patch: StyleDefinitionPatch) => StyleDefinitions | null;
   save: () => Promise<ArrayBuffer | null>;
   loadDocument: (doc: Document) => void;
   loadDocumentBuffer: (buffer: DocxInput) => Promise<void>;
@@ -293,6 +295,7 @@ export function useDocxEditorRefApi(opts: UseDocxEditorRefApiOptions): {
   const exposed = {
     getAgent: () => null,
     save: opts.save,
+    updateStyle: opts.updateStyle,
     setZoom: opts.setZoom,
     getZoom,
     focus: opts.focus,

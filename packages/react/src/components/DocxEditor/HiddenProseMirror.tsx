@@ -25,6 +25,7 @@ import {
   NodeSelection,
   type Command,
   type Plugin,
+  type Selection,
 } from 'prosemirror-state';
 import { CellSelection } from 'prosemirror-tables';
 import { EditorView, type DirectEditorProps } from 'prosemirror-view';
@@ -178,6 +179,32 @@ function createInitialState(
   );
 }
 
+function restoreSelectionForState(state: EditorState, selection: Selection): Selection {
+  const clamp = (pos: number) => Math.max(0, Math.min(pos, state.doc.content.size));
+
+  try {
+    if (selection instanceof TextSelection) {
+      return TextSelection.create(state.doc, clamp(selection.anchor), clamp(selection.head));
+    }
+
+    if (selection instanceof CellSelection) {
+      return CellSelection.create(
+        state.doc,
+        clamp(selection.$anchorCell.pos),
+        clamp(selection.$headCell.pos)
+      );
+    }
+
+    if (selection instanceof NodeSelection) {
+      return NodeSelection.create(state.doc, clamp(selection.from));
+    }
+  } catch {
+    // Fall through to a nearby text selection below.
+  }
+
+  return TextSelection.near(state.doc.resolve(clamp(selection.from)));
+}
+
 /**
  * Convert PM state to Document
  */
@@ -220,6 +247,9 @@ const HiddenProseMirrorComponent = forwardRef<HiddenProseMirrorRef, HiddenProseM
     // Track the document identity to detect truly external changes
     // vs changes that originated from editing (which get passed back through props)
     const lastDocumentIdRef = useRef<string | null>(null);
+    const lastStylesRef = useRef<StyleDefinitions | null | undefined>(
+      styles ?? document?.package?.styles
+    );
     // Track if we've initialized - first render needs to set up state
     const isInitializedRef = useRef(false);
 
@@ -331,6 +361,7 @@ const HiddenProseMirrorComponent = forwardRef<HiddenProseMirrorRef, HiddenProseM
       // first-mount updateState (createView already set the initial state).
       isInitializedRef.current = true;
       lastDocumentIdRef.current = getDocumentId(document);
+      lastStylesRef.current = styles ?? document?.package?.styles;
 
       // Notify that view is ready (use ref to avoid dependency issues)
       onEditorViewReadyRef.current?.(viewRef.current);
@@ -372,21 +403,33 @@ const HiddenProseMirrorComponent = forwardRef<HiddenProseMirrorRef, HiddenProseM
       if (!viewRef.current || isDestroyingRef.current) return;
 
       const currentDocId = getDocumentId(document);
+      const effectiveStyles = styles ?? document?.package?.styles;
+      const stylesChanged = effectiveStyles !== lastStylesRef.current;
 
       // Skip if this is the same document (likely passed back after internal edit)
       // Only reset state if:
       // 1. Not yet initialized (first mount)
       // 2. Document identity changed (truly external change like loading a new file)
-      if (isInitializedRef.current && currentDocId === lastDocumentIdRef.current) {
+      // 3. Style package identity changed (style-only update/reload)
+      if (
+        isInitializedRef.current &&
+        currentDocId === lastDocumentIdRef.current &&
+        !stylesChanged
+      ) {
         return;
       }
 
       // Update tracking refs
       isInitializedRef.current = true;
       lastDocumentIdRef.current = currentDocId;
+      lastStylesRef.current = effectiveStyles;
 
       // Create new state from document
-      const newState = createInitialState(document, styles, extensionManager, externalPlugins);
+      const previousSelection = viewRef.current.state.selection;
+      let newState = createInitialState(document, styles, extensionManager, externalPlugins);
+      newState = newState.apply(
+        newState.tr.setSelection(restoreSelectionForState(newState, previousSelection))
+      );
       viewRef.current.updateState(newState);
 
       // Use ref to avoid infinite loop when callback is unstable

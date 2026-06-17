@@ -19,3 +19,4 @@ export { serializeTable } from './tableSerializer';
 export { serializeHeaderFooter } from './headerFooterSerializer';
 export { serializeComments } from './commentSerializer';
 export { serializeFootnotes, serializeEndnotes } from './noteSerializer';
+export { serializeStyles, hasStyleDefinitionUpdates } from './styleSerializer';

@@ -5,7 +5,7 @@
  * Handles the cascade:
  * 1. Document defaults (docDefaults)
  * 2. Normal style (if no explicit styleId)
- * 3. Style chain (basedOn inheritance - already resolved by styleParser)
+ * 3. Style chain (basedOn inheritance)
  * 4. Inline properties
  *
  * Based on ECMA-376 style cascade rules.
@@ -17,6 +17,9 @@ import type {
   DocDefaults,
   ParagraphFormatting,
   TextFormatting,
+  TableCellFormatting,
+  TableFormatting,
+  TableRowFormatting,
 } from '../../types/document';
 import { mergeTextFormatting } from '../../utils/textFormattingMerge';
 
@@ -51,6 +54,7 @@ const BUILTIN_NORMAL_STYLE: Style = {
  * StyleResolver provides efficient access to resolved style properties
  */
 export class StyleResolver {
+  private readonly rawStylesById: Map<string, Style>;
   private readonly stylesById: Map<string, Style>;
   private readonly docDefaults: DocDefaults | undefined;
   private readonly defaultParagraphStyle: Style | undefined;
@@ -58,6 +62,7 @@ export class StyleResolver {
   private readonly defaultCharacterStyle: Style | undefined;
 
   constructor(styleDefinitions: StyleDefinitions | undefined) {
+    this.rawStylesById = new Map();
     this.stylesById = new Map();
     this.docDefaults = styleDefinitions?.docDefaults;
 
@@ -65,8 +70,15 @@ export class StyleResolver {
     if (styleDefinitions?.styles) {
       for (const style of styleDefinitions.styles) {
         if (style.styleId) {
-          this.stylesById.set(style.styleId, style);
+          this.rawStylesById.set(style.styleId, style);
         }
+      }
+    }
+
+    for (const styleId of this.rawStylesById.keys()) {
+      const resolved = this.resolveStyleInheritance(styleId);
+      if (resolved) {
+        this.stylesById.set(styleId, resolved);
       }
     }
 
@@ -138,7 +150,7 @@ export class StyleResolver {
       return result;
     }
 
-    // Get the requested style (already has basedOn chain resolved by styleParser)
+    // Get the requested style with its basedOn chain resolved.
     const style = this.stylesById.get(styleId);
     if (!style) {
       // Style not found, fall back to Normal
@@ -299,6 +311,48 @@ export class StyleResolver {
     return undefined;
   }
 
+  private resolveStyleInheritance(
+    styleId: string,
+    visited: Set<string> = new Set()
+  ): Style | undefined {
+    const cached = this.stylesById.get(styleId);
+    if (cached) return cached;
+
+    const style = this.rawStylesById.get(styleId);
+    if (!style) return undefined;
+
+    if (!style.basedOn || visited.has(styleId)) {
+      return { ...style };
+    }
+
+    visited.add(styleId);
+    const parent = this.resolveStyleInheritance(style.basedOn, visited);
+    visited.delete(styleId);
+
+    if (!parent) {
+      return { ...style };
+    }
+
+    return this.mergeStyles(parent, style);
+  }
+
+  private mergeStyles(parent: Style, child: Style): Style {
+    const resolved: Style = {
+      ...parent,
+      ...child,
+      styleId: child.styleId,
+      type: child.type,
+      pPr: this.mergeParagraphFormatting(parent.pPr, child.pPr),
+      rPr: this.mergeTextFormatting(parent.rPr, child.rPr),
+      tblPr: this.mergeTableFormatting(parent.tblPr, child.tblPr),
+      trPr: this.mergeTableRowFormatting(parent.trPr, child.trPr),
+      tcPr: this.mergeTableCellFormatting(parent.tcPr, child.tcPr),
+      tblStylePr: this.mergeTableStylePr(parent.tblStylePr, child.tblStylePr),
+    };
+
+    return resolved;
+  }
+
   private mergeStyleIntoResult(result: ResolvedParagraphStyle, style: Style): void {
     if (style.pPr) {
       result.paragraphFormatting = this.mergeParagraphFormatting(
@@ -348,6 +402,102 @@ export class StyleResolver {
     }
 
     return result;
+  }
+
+  private mergePlainObject<T extends Record<string, unknown>>(
+    target: T | undefined,
+    source: T | undefined
+  ): T | undefined {
+    if (!source) return target ? { ...target } : undefined;
+    if (!target) return { ...source };
+
+    const result: Record<string, unknown> = { ...target };
+    for (const [key, value] of Object.entries(source)) {
+      if (value === undefined) continue;
+      const baseValue = result[key];
+      if (
+        value &&
+        typeof value === 'object' &&
+        !Array.isArray(value) &&
+        baseValue &&
+        typeof baseValue === 'object' &&
+        !Array.isArray(baseValue)
+      ) {
+        result[key] = this.mergePlainObject(
+          baseValue as Record<string, unknown>,
+          value as Record<string, unknown>
+        );
+      } else if (Array.isArray(value)) {
+        result[key] = [...value];
+      } else {
+        result[key] = value;
+      }
+    }
+    return result as T;
+  }
+
+  private mergeTableFormatting(
+    target: TableFormatting | undefined,
+    source: TableFormatting | undefined
+  ): TableFormatting | undefined {
+    return this.mergePlainObject(
+      target as Record<string, unknown> | undefined,
+      source as Record<string, unknown> | undefined
+    ) as TableFormatting | undefined;
+  }
+
+  private mergeTableRowFormatting(
+    target: TableRowFormatting | undefined,
+    source: TableRowFormatting | undefined
+  ): TableRowFormatting | undefined {
+    return this.mergePlainObject(
+      target as Record<string, unknown> | undefined,
+      source as Record<string, unknown> | undefined
+    ) as TableRowFormatting | undefined;
+  }
+
+  private mergeTableCellFormatting(
+    target: TableCellFormatting | undefined,
+    source: TableCellFormatting | undefined
+  ): TableCellFormatting | undefined {
+    return this.mergePlainObject(
+      target as Record<string, unknown> | undefined,
+      source as Record<string, unknown> | undefined
+    ) as TableCellFormatting | undefined;
+  }
+
+  private mergeTableStylePr(
+    target: Style['tblStylePr'],
+    source: Style['tblStylePr']
+  ): Style['tblStylePr'] {
+    if (!source) return target ? target.map((entry) => ({ ...entry })) : undefined;
+
+    const byType = new Map<string, NonNullable<Style['tblStylePr']>[number]>();
+    const order: string[] = [];
+
+    for (const entry of target ?? []) {
+      byType.set(entry.type, { ...entry });
+      order.push(entry.type);
+    }
+
+    for (const entry of source) {
+      if (!byType.has(entry.type)) {
+        order.push(entry.type);
+      }
+      const base = byType.get(entry.type);
+      byType.set(entry.type, {
+        type: entry.type,
+        pPr: this.mergeParagraphFormatting(base?.pPr, entry.pPr),
+        rPr: this.mergeTextFormatting(base?.rPr, entry.rPr),
+        tblPr: this.mergeTableFormatting(base?.tblPr, entry.tblPr),
+        trPr: this.mergeTableRowFormatting(base?.trPr, entry.trPr),
+        tcPr: this.mergeTableCellFormatting(base?.tcPr, entry.tcPr),
+      });
+    }
+
+    return order.map((type) => byType.get(type)).filter(Boolean) as NonNullable<
+      Style['tblStylePr']
+    >;
   }
 
   private mergeTextFormatting(

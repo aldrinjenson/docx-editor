@@ -37,6 +37,9 @@ import { runsToClipboardContent } from '@eigenpal/docx-editor-core/utils';
 import { SavedDocumentData } from '@eigenpal/docx-editor-core/managers/types';
 import { SelectionHighlightConfig } from '@eigenpal/docx-editor-core/utils';
 import { ShallowRef } from 'vue';
+import { StyleDefinitionPatch } from '@eigenpal/docx-editor-core/docx';
+import { StyleDefinitions } from '@eigenpal/docx-editor-core/types/document';
+import { StyleOverrides } from '@eigenpal/docx-editor-core/docx';
 import { Theme } from '@eigenpal/docx-editor-core';
 import { TrackedChangeEntry } from '@eigenpal/docx-editor-core/utils/comments';
 import { TrackedChangesResult } from '@eigenpal/docx-editor-core/prosemirror/utils/extractTrackedChanges';
@@ -240,9 +243,12 @@ export interface UseDocxEditorOptions {
     onChange?: (doc: Document_2) => void;
     onError?: (error: Error) => void;
     onSelectionUpdate?: () => void;
+    onStyleDefinitionsChange?: (styles: StyleDefinitions) => void;
     pageGap?: number;
     pagesContainer: Ref<HTMLElement | null>;
     readOnly?: MaybeRef<boolean>;
+    styleDefinitions?: MaybeRef<StyleDefinitions | null | undefined>;
+    styleOverrides?: MaybeRef<StyleOverrides | null | undefined>;
     syncCoordinator?: LayoutSelectionGate;
 }
 
@@ -266,6 +272,7 @@ export interface UseDocxEditorReturn {
     setDocument: (doc: Document_2) => void;
     setHfTransactionListener: (cb: ((rId: string, view: EditorView, docChanged: boolean) => void) | null) => void;
     syncHfPMs: () => void;
+    updateStyle: (styleId: string, patch: StyleDefinitionPatch) => StyleDefinitions | null;
 }
 
 // @public (undocumented)

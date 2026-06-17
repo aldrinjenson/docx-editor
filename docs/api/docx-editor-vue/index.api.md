@@ -24,6 +24,9 @@ import { MaybeRef } from 'vue';
 import { Plugin as Plugin_2 } from 'prosemirror-state';
 import { PMContentControl } from '@eigenpal/docx-editor-core/prosemirror';
 import { SelectionState } from '@eigenpal/docx-editor-core/prosemirror';
+import { StyleDefinitionPatch } from '@eigenpal/docx-editor-core/docx';
+import { StyleDefinitions } from '@eigenpal/docx-editor-core/types/document';
+import { StyleOverrides } from '@eigenpal/docx-editor-core/docx';
 import { StyleValue } from 'vue';
 import { TFunction } from '@eigenpal/docx-editor-i18n';
 import { Theme } from '@eigenpal/docx-editor-core/types/document';
@@ -75,6 +78,7 @@ export interface DocxEditorProps {
     onModeChange?: (mode: EditorMode) => void;
     onPrint?: () => void;
     onSelectionChange?: (state: SelectionState | null) => void;
+    onStyleDefinitionsChange?: (styles: StyleDefinitions) => void;
     readOnly?: boolean;
     renderLogo?: () => VNodeChild;
     renderTitleBarRight?: () => VNodeChild;
@@ -85,6 +89,8 @@ export interface DocxEditorProps {
     showToolbar?: boolean;
     showZoomControl?: boolean;
     style?: StyleValue;
+    styleDefinitions?: StyleDefinitions | null;
+    styleOverrides?: StyleOverrides;
     theme?: Theme | null;
     toolbarExtra?: () => VNodeChild;
     watermarkPresets?: readonly string[];
@@ -94,6 +100,7 @@ export interface DocxEditorProps {
 export type DocxEditorRef = EditorRefLike & {
     getAgent(): null;
     save(): Promise<ArrayBuffer | null>;
+    updateStyle(styleId: string, patch: StyleDefinitionPatch): StyleDefinitions | null;
     setZoom(zoom: number): void;
     getZoom(): number;
     focus(): void;

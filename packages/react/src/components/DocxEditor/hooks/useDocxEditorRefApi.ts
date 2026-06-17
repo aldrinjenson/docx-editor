@@ -1,5 +1,5 @@
 import { useImperativeHandle } from 'react';
-import type { Document } from '@eigenpal/docx-editor-core/types/document';
+import type { Document, StyleDefinitions } from '@eigenpal/docx-editor-core/types/document';
 import type { Comment } from '@eigenpal/docx-editor-core/types/content';
 import { DocumentAgent } from '@eigenpal/docx-editor-core/agent';
 import {
@@ -28,6 +28,7 @@ import {
   type ContentControlValue,
 } from '@eigenpal/docx-editor-core/agent';
 import type { DocxInput } from '@eigenpal/docx-editor-core/utils';
+import type { StyleDefinitionPatch } from '@eigenpal/docx-editor-core/docx';
 import { getCachedNumberingMap } from '@eigenpal/docx-editor-core/docx';
 import type { DocxEditorRef } from '../../DocxEditor';
 import type { PagedEditorRef } from '../PagedEditor';
@@ -52,6 +53,7 @@ export function useDocxEditorRefApi({
   document,
   historyStateRef,
   pagedEditorRef,
+  updateStyle,
   handleSave,
   handleDirectPrint,
   zoom,
@@ -72,6 +74,7 @@ export function useDocxEditorRefApi({
   document: Document | null;
   historyStateRef: React.RefObject<Document | null>;
   pagedEditorRef: React.RefObject<PagedEditorRef | null>;
+  updateStyle: (styleId: string, patch: StyleDefinitionPatch) => StyleDefinitions | null;
   handleSave: (options?: { selective?: boolean }) => Promise<ArrayBuffer | null>;
   handleDirectPrint: () => void;
   zoom: number;
@@ -95,6 +98,7 @@ export function useDocxEditorRefApi({
       getAgent: () => agentRef.current,
       getDocument: () => document,
       getEditorRef: () => pagedEditorRef.current,
+      updateStyle,
       save: handleSave,
       setZoom,
       getZoom: () => zoom,
@@ -275,6 +279,7 @@ export function useDocxEditorRefApi({
     // semantics they had pre-extraction.
     [
       document,
+      updateStyle,
       zoom,
       scrollPageInfo,
       handleSave,

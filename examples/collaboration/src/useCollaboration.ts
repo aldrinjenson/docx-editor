@@ -4,6 +4,7 @@ import { WebrtcProvider } from 'y-webrtc';
 import { ySyncPlugin, yCursorPlugin, yUndoPlugin } from 'y-prosemirror';
 import type { Plugin } from 'prosemirror-state';
 import type { Comment } from '@eigenpal/docx-editor-core/types/content';
+import type { StyleDefinitions } from '@eigenpal/docx-editor-core/types/document';
 
 export interface CollaborativeUser {
   clientId: number;
@@ -21,29 +22,70 @@ export interface CollaborationState {
   comments: Comment[];
   /** Pass to DocxEditor's `onCommentsChange`. Replaces the Y.Array contents in a single transact. */
   setComments: (next: Comment[]) => void;
+  /** Styles mirrored from a Y.Map on the same Y.Doc — pass to DocxEditor's `styleDefinitions` prop. */
+  styleDefinitions: StyleDefinitions | undefined;
+  /** Pass to DocxEditor's `onStyleDefinitionsChange`. */
+  setStyleDefinitions: (next: StyleDefinitions) => void;
 }
 
 const SIGNALING_SERVERS = ['wss://signaling.yjs.dev', 'wss://y-webrtc-signaling-eu.herokuapp.com'];
+const STYLE_DEFINITIONS_KEY = 'definitions';
+
+function encodeUpdate(update: Uint8Array): string {
+  let binary = '';
+  for (const byte of update) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+function decodeUpdate(encoded: string): Uint8Array {
+  const binary = atob(encoded);
+  const update = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    update[i] = binary.charCodeAt(i);
+  }
+  return update;
+}
 
 export function useCollaboration(
   roomName: string,
-  localUser: { name: string; color: string }
+  localUser: { name: string; color: string },
+  initialStyles?: StyleDefinitions
 ): CollaborationState {
   // Y.Doc, provider, prosemirror plugins, and the comments Y.Array are created
   // once per room. localUser changes (e.g. renaming) update awareness without
   // rebuilding the doc.
-  const { ydoc, provider, plugins, yComments } = useMemo(() => {
+  const { ydoc, provider, plugins, yComments, yStyles, persist } = useMemo(() => {
     const ydoc = new Y.Doc();
+    const persistenceKey = `docx-editor:collaboration:${roomName}`;
+    const persistedState = window.localStorage.getItem(persistenceKey);
+    if (persistedState) {
+      Y.applyUpdate(ydoc, decodeUpdate(persistedState));
+    }
+
     const provider = new WebrtcProvider(roomName, ydoc, { signaling: SIGNALING_SERVERS });
     const fragment = ydoc.getXmlFragment('prosemirror');
     const plugins = [ySyncPlugin(fragment), yCursorPlugin(provider.awareness), yUndoPlugin()];
     const yComments = ydoc.getArray<Comment>('comments');
-    return { ydoc, provider, plugins, yComments };
-  }, [roomName]);
+    const yStyles = ydoc.getMap<StyleDefinitions>('styles');
+    if (initialStyles && !yStyles.has(STYLE_DEFINITIONS_KEY)) {
+      yStyles.set(STYLE_DEFINITIONS_KEY, initialStyles);
+    }
+
+    const persist = () => {
+      window.localStorage.setItem(persistenceKey, encodeUpdate(Y.encodeStateAsUpdate(ydoc)));
+    };
+    persist();
+    ydoc.on('update', persist);
+
+    return { ydoc, provider, plugins, yComments, yStyles, persist };
+  }, [roomName, initialStyles]);
 
   const [users, setUsers] = useState<CollaborativeUser[]>([]);
   const [status, setStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
   const [comments, setCommentsState] = useState<Comment[]>(() => yComments.toArray());
+  const [styleDefinitions, setStyleDefinitionsState] = useState<StyleDefinitions | undefined>(() =>
+    yStyles.get(STYLE_DEFINITIONS_KEY)
+  );
 
   // Publish local user identity into awareness so peers can render avatars + cursors.
   useEffect(() => {
@@ -90,6 +132,13 @@ export function useCollaboration(
     return () => yComments.unobserveDeep(sync);
   }, [yComments]);
 
+  useEffect(() => {
+    const sync = () => setStyleDefinitionsState(yStyles.get(STYLE_DEFINITIONS_KEY));
+    sync();
+    yStyles.observe(sync);
+    return () => yStyles.unobserve(sync);
+  }, [yStyles]);
+
   // Push the editor's new comments array back into Yjs. Naive replace-all:
   // delete everything, push the new array. Adequate for a demo on a small
   // collection where the controlled API hands us the full array each time.
@@ -103,13 +152,32 @@ export function useCollaboration(
     [ydoc, yComments]
   );
 
+  const setStyleDefinitions = useCallback(
+    (next: StyleDefinitions) => {
+      ydoc.transact(() => {
+        yStyles.set(STYLE_DEFINITIONS_KEY, next);
+      });
+    },
+    [ydoc, yStyles]
+  );
+
   // Tear down on unmount / room change.
   useEffect(() => {
     return () => {
       provider.destroy();
+      ydoc.off('update', persist);
       ydoc.destroy();
     };
-  }, [provider, ydoc]);
+  }, [provider, ydoc, persist]);
 
-  return { plugins, users, roomName, status, comments, setComments };
+  return {
+    plugins,
+    users,
+    roomName,
+    status,
+    comments,
+    setComments,
+    styleDefinitions,
+    setStyleDefinitions,
+  };
 }

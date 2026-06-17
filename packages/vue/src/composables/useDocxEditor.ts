@@ -15,11 +15,19 @@ import {
   type Ref,
   type ShallowRef,
 } from 'vue';
-import { EditorState, type Transaction, type Plugin } from 'prosemirror-state';
+import {
+  EditorState,
+  TextSelection,
+  type Selection,
+  type Transaction,
+  type Plugin,
+} from 'prosemirror-state';
 import { EditorView } from 'prosemirror-view';
+import { useStyleDefinitions } from './useStyleDefinitions';
 
 // Core imports — these all resolve through Vite aliases to packages/core/src/
 import { parseDocx } from '@eigenpal/docx-editor-core/docx/parser';
+import type { StyleDefinitionPatch, StyleOverrides } from '@eigenpal/docx-editor-core/docx';
 import {
   toProseDoc,
   createEmptyDoc,
@@ -79,7 +87,7 @@ import {
   enclosingSdtGroupIds,
   applySdtFocus,
 } from '@eigenpal/docx-editor-core/layout-painter';
-import type { Document } from '@eigenpal/docx-editor-core/types/document';
+import type { Document, StyleDefinitions } from '@eigenpal/docx-editor-core/types/document';
 import type { LayoutSelectionGate } from '@eigenpal/docx-editor-core/prosemirror';
 
 // ProseMirror CSS — must be imported for the hidden editor to work
@@ -206,6 +214,12 @@ export interface UseDocxEditorOptions {
   editorMode?: MaybeRef<'editing' | 'suggesting' | 'viewing'>;
   /** Author name attached to tracked changes minted in suggesting mode. */
   author?: MaybeRef<string>;
+  /** Declarative style overrides keyed by style ID. */
+  styleOverrides?: MaybeRef<StyleOverrides | null | undefined>;
+  /** Controlled full style package, useful for collaboration providers. */
+  styleDefinitions?: MaybeRef<StyleDefinitions | null | undefined>;
+  /** Called when updateStyle mutates the style package. */
+  onStyleDefinitionsChange?: (styles: StyleDefinitions) => void;
 }
 
 export interface UseDocxEditorReturn {
@@ -264,6 +278,8 @@ export interface UseDocxEditorReturn {
   ) => void;
   /** Publish a fresh Document object (used by HF materialisation). */
   setDocument: (doc: Document) => void;
+  /** Merge a style definition update and refresh the rendered document. */
+  updateStyle: (styleId: string, patch: StyleDefinitionPatch) => StyleDefinitions | null;
 }
 
 export function useDocxEditor(options: UseDocxEditorOptions): UseDocxEditorReturn {
@@ -279,6 +295,9 @@ export function useDocxEditor(options: UseDocxEditorOptions): UseDocxEditorRetur
     syncCoordinator,
     editorMode,
     author,
+    styleOverrides,
+    styleDefinitions,
+    onStyleDefinitionsChange,
   } = options;
 
   // State
@@ -417,13 +436,10 @@ export function useDocxEditor(options: UseDocxEditorOptions): UseDocxEditorRetur
   // ProseMirror setup
   // ========================================================================
 
-  function createEditorView() {
-    const host = hiddenContainer.value;
-    if (!host) return;
-
-    const docStyles = document.value?.package?.styles;
-    const doc = document.value
-      ? toProseDoc(document.value, { styles: docStyles ?? undefined })
+  function createEditorStateForDocument(docModel: Document | null): EditorState {
+    const docStyles = docModel?.package?.styles;
+    const doc = docModel
+      ? toProseDoc(docModel, { styles: docStyles ?? undefined })
       : createEmptyDoc();
 
     // Suggestion-mode plugin is registered inactive; `setSuggestionMode()`
@@ -444,13 +460,59 @@ export function useDocxEditor(options: UseDocxEditorOptions): UseDocxEditorRetur
     // Give every paragraph a paraId up front (docs without `w14:paraId` ship
     // none), so block ids / agent scope work before the first edit — the
     // allocator plugin's appendTransaction never fires on create (#738).
-    const state = ensureParaIdsInState(
+    return ensureParaIdsInState(
       EditorState.create({
         doc,
         schema: mgr.getSchema(),
         plugins,
       })
     );
+  }
+
+  function restoreSelectionForState(state: EditorState, selection: Selection): Selection {
+    const pos = Math.max(0, Math.min(selection.from, state.doc.content.size));
+    try {
+      return TextSelection.near(state.doc.resolve(pos));
+    } catch {
+      return TextSelection.create(state.doc, 0);
+    }
+  }
+
+  function refreshEditorFromDocument(previousSelection?: Selection) {
+    if (!editorView.value) {
+      createEditorView();
+      syncHfPMs();
+      return;
+    }
+
+    let state = createEditorStateForDocument(document.value);
+    if (previousSelection) {
+      state = state.apply(
+        state.tr.setSelection(restoreSelectionForState(state, previousSelection))
+      );
+    }
+    editorView.value.updateState(state);
+    editorState.value = state;
+    runLayoutPipeline(state);
+    syncHfPMs();
+  }
+
+  const { prepareLoadedDocument, updateStyle } = useStyleDefinitions({
+    document,
+    editorView,
+    styleDefinitions,
+    styleOverrides,
+    onChange,
+    onStyleDefinitionsChange,
+    refreshEditorFromDocument,
+    onSelectionUpdate,
+  });
+
+  function createEditorView() {
+    const host = hiddenContainer.value;
+    if (!host) return;
+
+    const state = createEditorStateForDocument(document.value);
     editorState.value = state;
 
     // Sync the cached host Document with the just-allocated paraIds so
@@ -766,7 +828,7 @@ export function useDocxEditor(options: UseDocxEditorOptions): UseDocxEditorRetur
       }
 
       const doc = await parseDocx(arrayBuf);
-      document.value = doc;
+      document.value = prepareLoadedDocument(doc);
 
       // Recreate PM view with new document
       destroyEditorView();
@@ -782,7 +844,7 @@ export function useDocxEditor(options: UseDocxEditorOptions): UseDocxEditorRetur
 
   function loadDocument(doc: Document) {
     parseError.value = null;
-    document.value = doc;
+    document.value = prepareLoadedDocument(doc);
     destroyEditorView();
     destroyHfPMs();
     createEditorView();
@@ -876,6 +938,7 @@ export function useDocxEditor(options: UseDocxEditorOptions): UseDocxEditorRetur
     },
     syncHfPMs,
     setHfTransactionListener,
+    updateStyle,
     /**
      * Publish a fresh Document object — used by HF materialisation in
      * usePagesPointer to push a new doc identity that watchers can observe.

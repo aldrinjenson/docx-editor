@@ -8,6 +8,9 @@ import { EditorView } from 'prosemirror-view';
 import { Node as Node_2 } from 'prosemirror-model';
 import { Plugin as Plugin_2 } from 'prosemirror-state';
 
+// @public (undocumented)
+export function addStyleDefinition(styleDefinitions: StyleDefinitions | undefined, style: Style): StyleDefinitions;
+
 // @public
 export type AgentCommand = InsertTextCommand | ReplaceTextCommand | DeleteTextCommand | FormatTextCommand | FormatParagraphCommand | ApplyStyleCommand | InsertTableCommand | InsertImageCommand | InsertHyperlinkCommand | RemoveHyperlinkCommand | InsertParagraphBreakCommand | MergeParagraphsCommand | SplitParagraphCommand | SetVariableCommand | ApplyVariablesCommand;
 
@@ -65,6 +68,9 @@ export interface ApplyStyleCommand extends BaseCommand {
     // (undocumented)
     type: 'applyStyle';
 }
+
+// @public (undocumented)
+export function applyStyleOverrides(styleDefinitions: StyleDefinitions | undefined, overrides: StyleOverrides | null | undefined): StyleDefinitions | undefined;
 
 // @public
 export function attemptSelectiveSave(doc: Document_2, originalBuffer: ArrayBuffer, options: SelectiveSaveOptions): Promise<ArrayBuffer | null>;
@@ -204,6 +210,9 @@ export interface ClipboardSelection {
     // (undocumented)
     text: string;
 }
+
+// @public (undocumented)
+export function cloneStyleDefinitions(styleDefinitions: StyleDefinitions): StyleDefinitions;
 
 // @public
 export function collectFootnoteRefs(blocks: FlowBlock[]): FootnoteRefLocation[];
@@ -384,6 +393,7 @@ export { Document_2 as Document }
 // @public
 export class DocumentAgent {
     constructor(source: Document_2 | ArrayBuffer);
+    addStyle(style: Style): DocumentAgent;
     applyFormatting(range: Range_2, formatting: Partial<TextFormatting>): DocumentAgent;
     applyParagraphFormatting(paragraphIndex: number, formatting: Partial<ParagraphFormatting>): DocumentAgent;
     applyStyle(paragraphIndex: number, styleId: string): DocumentAgent;
@@ -400,6 +410,7 @@ export class DocumentAgent {
     getPageCount(): number;
     getParagraphCount(): number;
     getPendingVariables(): Record<string, string>;
+    getStyleDefinitions(): StyleDefinitions | undefined;
     getStyles(): StyleInfo[];
     getTableCount(): number;
     getText(): string;
@@ -419,6 +430,8 @@ export class DocumentAgent {
     toBuffer(options?: {
         selective?: SelectiveSaveOptions;
     }): Promise<ArrayBuffer>;
+    updateDocDefaults(patch: Partial<DocDefaults>): DocumentAgent;
+    updateStyle(styleId: string, patch: StyleDefinitionPatch): DocumentAgent;
 }
 
 // @public
@@ -719,6 +732,9 @@ export function halfPointsToPixels(halfPoints: number): number;
 
 // @public
 export function hasPageBreakBefore(paragraph: Paragraph): boolean;
+
+// @public
+export function hasStyleDefinitionUpdates(styleDefinitions: StyleDefinitions | null | undefined, originalStylesXml?: string | null): boolean;
 
 // @public
 export function hasTemplateVariables(text: string): boolean;
@@ -1520,6 +1536,9 @@ export function serializeDocx(doc: Document_2): string;
 // @public
 export function serializeSectionProperties(props: SectionProperties | undefined): string;
 
+// @public (undocumented)
+export function serializeStyles(originalStylesXml: string | undefined, styleDefinitions: StyleDefinitions): string;
+
 // @public
 export function setGoogleFontsEnabled(enabled: boolean): void;
 
@@ -1592,7 +1611,7 @@ export interface Style {
     styleId: string;
     tblPr?: TableFormatting;
     tblStylePr?: Array<{
-        type: 'band1Horz' | 'band1Vert' | 'band2Horz' | 'band2Vert' | 'firstCol' | 'firstRow' | 'lastCol' | 'lastRow' | 'neCell' | 'nwCell' | 'seCell' | 'swCell';
+        type: 'band1Horz' | 'band1Vert' | 'band2Horz' | 'band2Vert' | 'firstCol' | 'firstRow' | 'lastCol' | 'lastRow' | 'neCell' | 'nwCell' | 'seCell' | 'swCell' | 'wholeTable';
         pPr?: ParagraphFormatting;
         rPr?: TextFormatting;
         tblPr?: TableFormatting;
@@ -1606,9 +1625,20 @@ export interface Style {
     unhideWhenUsed?: boolean;
 }
 
+// @public (undocumented)
+export interface StyleDefinitionPatch extends Partial<Omit<Style, 'styleId'>> {
+    alignment?: ParagraphFormatting['alignment'];
+    bold?: boolean;
+    color?: string | ColorValue;
+    fontSize?: number;
+    italic?: boolean;
+    styleId?: string;
+}
+
 // @public
 export interface StyleDefinitions {
     docDefaults?: DocDefaults;
+    docDefaultsModified?: boolean;
     latentStyles?: {
         defLockedState?: boolean;
         defUIPriority?: number;
@@ -1617,8 +1647,12 @@ export interface StyleDefinitions {
         defQFormat?: boolean;
         count?: number;
     };
+    modifiedStyleIds?: string[];
     styles: Style[];
 }
+
+// @public (undocumented)
+export type StyleOverrides = Record<string, StyleDefinitionPatch | null | undefined>;
 
 // @public
 export abstract class Subscribable<TSnapshot> {
@@ -1688,6 +1722,9 @@ export class TableSelectionManager extends Subscribable<TableSelectionSnapshot> 
 export interface TableSelectionSnapshot {
     selectedCell: CellCoordinates | null;
 }
+
+// @public
+export type TableStyleCondition = NonNullable<Style['tblStylePr']>[number];
 
 // @public
 export interface TextBox {
@@ -1835,8 +1872,14 @@ export function twipsToEmu(twips: number): number;
 // @public
 export function twipsToPixels(twips: number): number;
 
+// @public (undocumented)
+export function updateDocDefaults(styleDefinitions: StyleDefinitions | undefined, patch: Partial<DocDefaults>): StyleDefinitions;
+
 // @public
 export function updateMultipleFiles(originalBuffer: ArrayBuffer, updates: Map<string, string | ArrayBuffer>, options?: RepackOptions): Promise<ArrayBuffer>;
+
+// @public (undocumented)
+export function updateStyleDefinition(styleDefinitions: StyleDefinitions | undefined, styleId: string, patch: StyleDefinitionPatch): StyleDefinitions;
 
 // @internal
 export function updateTableInDocument(doc: Document_2, tableIndex: number, newTable: Table): Document_2;

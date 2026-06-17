@@ -1028,7 +1028,7 @@ export interface Style {
     styleId: string;
     tblPr?: TableFormatting;
     tblStylePr?: Array<{
-        type: 'band1Horz' | 'band1Vert' | 'band2Horz' | 'band2Vert' | 'firstCol' | 'firstRow' | 'lastCol' | 'lastRow' | 'neCell' | 'nwCell' | 'seCell' | 'swCell';
+        type: 'band1Horz' | 'band1Vert' | 'band2Horz' | 'band2Vert' | 'firstCol' | 'firstRow' | 'lastCol' | 'lastRow' | 'neCell' | 'nwCell' | 'seCell' | 'swCell' | 'wholeTable';
         pPr?: ParagraphFormatting;
         rPr?: TextFormatting;
         tblPr?: TableFormatting;
@@ -1045,6 +1045,7 @@ export interface Style {
 // @public
 export interface StyleDefinitions {
     docDefaults?: DocDefaults;
+    docDefaultsModified?: boolean;
     latentStyles?: {
         defLockedState?: boolean;
         defUIPriority?: number;
@@ -1053,6 +1054,7 @@ export interface StyleDefinitions {
         defQFormat?: boolean;
         count?: number;
     };
+    modifiedStyleIds?: string[];
     styles: Style[];
 }
 

@@ -11,6 +11,11 @@
 import type { Document, BlockContent } from '../types/document';
 import { serializeDocument } from './serializer/documentSerializer';
 import {
+  ensureStylesContentType,
+  hasStyleDefinitionUpdates,
+  serializeStyles,
+} from './serializer/styleSerializer';
+import {
   serializeCommentsWithInfo,
   serializeCommentsExtended,
   serializeCommentsIds,
@@ -223,6 +228,42 @@ export async function attemptSelectiveSave(
     // Serialize modified headers/footers
     for (const [path, xml] of headerFooterUpdates) {
       updates.set(path, xml);
+    }
+
+    const stylesFile = zip.file('word/styles.xml');
+    const originalStylesXml = stylesFile ? await stylesFile.async('text') : undefined;
+    if (hasStyleDefinitionUpdates(doc.package.styles, originalStylesXml)) {
+      updates.set('word/styles.xml', serializeStyles(originalStylesXml, doc.package.styles!));
+
+      if (!originalStylesXml) {
+        const ctFile = zip.file('[Content_Types].xml');
+        if (ctFile) {
+          const ctXml = updates.get('[Content_Types].xml') ?? (await ctFile.async('text'));
+          if (typeof ctXml === 'string') {
+            const updatedCtXml = ensureStylesContentType(ctXml);
+            if (updatedCtXml !== ctXml) {
+              updates.set('[Content_Types].xml', updatedCtXml);
+            }
+          }
+        }
+
+        const relsPath = 'word/_rels/document.xml.rels';
+        const relsFile = zip.file(relsPath);
+        if (relsFile) {
+          const relsXml = updates.get(relsPath) ?? (await relsFile.async('text'));
+          if (
+            typeof relsXml === 'string' &&
+            !relsXml.includes(RELATIONSHIP_TYPES.styles) &&
+            !relsXml.includes('Target="styles.xml"')
+          ) {
+            const relationshipXml = `<Relationship Id="rId${findMaxRId(relsXml) + 1}" Type="${RELATIONSHIP_TYPES.styles}" Target="styles.xml"/>`;
+            updates.set(
+              relsPath,
+              relsXml.replace('</Relationships>', `${relationshipXml}</Relationships>`)
+            );
+          }
+        }
+      }
     }
 
     // Update modification date in docProps/core.xml

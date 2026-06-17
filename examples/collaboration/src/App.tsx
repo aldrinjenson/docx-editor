@@ -76,12 +76,12 @@ export function App() {
   const [room] = useState(getOrCreateRoomFromUrl);
   const [shareCopied, setShareCopied] = useState(false);
 
-  const { plugins, users, status, comments, setComments } = useCollaboration(room, user);
-  const { zoom: autoZoom, isMobile } = useResponsiveLayout();
-
   // Empty document acts purely as a schema seed. ySyncPlugin populates the real
   // content from the Y.Doc, which is why we set externalContent on the editor.
   const seedDocument = useMemo(() => createEmptyDocument(), []);
+  const { plugins, users, status, comments, setComments, styleDefinitions, setStyleDefinitions } =
+    useCollaboration(room, user, seedDocument.package.styles);
+  const { zoom: autoZoom, isMobile } = useResponsiveLayout();
 
   const handleCopyShareLink = useCallback(async () => {
     try {
@@ -128,6 +128,8 @@ export function App() {
           externalPlugins={plugins}
           comments={comments}
           onCommentsChange={setComments}
+          styleDefinitions={styleDefinitions}
+          onStyleDefinitionsChange={setStyleDefinitions}
           author={user.name}
           showToolbar
           showRuler={!isMobile}

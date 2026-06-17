@@ -5,6 +5,9 @@
 ```ts
 
 // @public
+export function hasStyleDefinitionUpdates(styleDefinitions: StyleDefinitions | null | undefined, originalStylesXml?: string | null): boolean;
+
+// @public
 export function serializeBlockContent(block: BlockContent): string;
 
 // @public
@@ -33,6 +36,9 @@ export function serializeRun(run: Run): string;
 
 // @public
 export function serializeSectionProperties(props: SectionProperties | undefined): string;
+
+// @public (undocumented)
+export function serializeStyles(originalStylesXml: string | undefined, styleDefinitions: StyleDefinitions): string;
 
 // @public
 export function serializeTable(table: Table): string;

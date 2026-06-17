@@ -1,5 +1,5 @@
 /**
- * Style Parser - Parse styles.xml with full inheritance resolution
+ * Style Parser - Parse styles.xml style definitions and resolved style maps
  *
  * Parses all style types (paragraph, character, table, list) with
  * complete basedOn inheritance chain resolution.
@@ -14,9 +14,9 @@
  * 3. Current style properties
  * 4. Direct formatting in document
  *
- * This file owns the style element itself, docDefaults, inheritance
- * resolution, and the top-level entry points (parseStyles,
- * parseStyleDefinitions, getResolved*). Property-level parsers live under
+ * This file owns the style element itself, docDefaults, the import-time
+ * resolved StyleMap, and the editable raw StyleDefinitions package.
+ * Property-level parsers live under
  * ./styleParser/{runProperties,paragraphProperties,tableProperties}.ts.
  */
 
@@ -291,6 +291,29 @@ function resolveStyleInheritance(
     if (resolvedParent.tcPr || style.tcPr) {
       resolved.tcPr = { ...(resolvedParent.tcPr || {}), ...(style.tcPr || {}) };
     }
+    if (resolvedParent.tblStylePr || style.tblStylePr) {
+      const byType = new Map<string, NonNullable<Style['tblStylePr']>[number]>();
+      const order: string[] = [];
+      for (const entry of resolvedParent.tblStylePr ?? []) {
+        byType.set(entry.type, { ...entry });
+        order.push(entry.type);
+      }
+      for (const entry of style.tblStylePr ?? []) {
+        if (!byType.has(entry.type)) order.push(entry.type);
+        const base = byType.get(entry.type);
+        byType.set(entry.type, {
+          type: entry.type,
+          pPr: mergeParagraphFormatting(base?.pPr, entry.pPr),
+          rPr: mergeTextFormatting(base?.rPr, entry.rPr),
+          tblPr: { ...(base?.tblPr ?? {}), ...(entry.tblPr ?? {}) },
+          trPr: { ...(base?.trPr ?? {}), ...(entry.trPr ?? {}) },
+          tcPr: { ...(base?.tcPr ?? {}), ...(entry.tcPr ?? {}) },
+        });
+      }
+      resolved.tblStylePr = order.map((type) => byType.get(type)).filter(Boolean) as NonNullable<
+        Style['tblStylePr']
+      >;
+    }
   }
 
   return resolved;
@@ -338,7 +361,7 @@ export function parseStyles(stylesXml: string, theme: Theme | null): StyleMap {
  *
  * @param stylesXml - XML content of styles.xml
  * @param theme - Parsed theme for resolving theme references
- * @returns StyleDefinitions with docDefaults and resolved styles
+ * @returns StyleDefinitions with docDefaults and raw, editable styles
  */
 export function parseStyleDefinitions(stylesXml: string, theme: Theme | null): StyleDefinitions {
   const result: StyleDefinitions = {
@@ -368,9 +391,15 @@ export function parseStyleDefinitions(stylesXml: string, theme: Theme | null): S
       };
     }
 
-    // Parse styles with full inheritance resolution
-    const styleMap = parseStyles(stylesXml, theme);
-    result.styles = Array.from(styleMap.values());
+    // Parse raw styles. The editable package must keep basedOn links intact
+    // so later modifications to a parent style flow through StyleResolver.
+    const styleElements = findChildren(doc, 'w', 'style');
+    for (const styleEl of styleElements) {
+      const style = parseStyle(styleEl, theme);
+      if (style.styleId) {
+        result.styles.push(style);
+      }
+    }
   } catch (error) {
     console.warn('Failed to parse style definitions:', error);
   }

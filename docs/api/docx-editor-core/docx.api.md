@@ -6,6 +6,12 @@
 
 import { Element as Element_2 } from 'xml-js';
 
+// @public (undocumented)
+export function addStyleDefinition(styleDefinitions: StyleDefinitions | undefined, style: Style): StyleDefinitions;
+
+// @public (undocumented)
+export function applyStyleOverrides(styleDefinitions: StyleDefinitions | undefined, overrides: StyleOverrides | null | undefined): StyleDefinitions | undefined;
+
 // @public
 export function attemptSelectiveSave(doc: Document_2, originalBuffer: ArrayBuffer, options: SelectiveSaveOptions): Promise<ArrayBuffer | null>;
 
@@ -20,6 +26,9 @@ export function calculateTabWidthWithAlignment(currentPosition: number, tabStops
     width: number;
     alignment: TabStopAlignment;
 };
+
+// @public (undocumented)
+export function cloneStyleDefinitions(styleDefinitions: StyleDefinitions): StyleDefinitions;
 
 // @public
 export interface ComplexFieldContext {
@@ -210,6 +219,9 @@ export function hasMergeFormat(instruction: ParsedFieldInstruction): boolean;
 
 // @public
 export function hasOutline(shape: Shape): boolean;
+
+// @public
+export function hasStyleDefinitionUpdates(styleDefinitions: StyleDefinitions | null | undefined, originalStylesXml?: string | null): boolean;
 
 // @public
 export function hasTextBoxContent(textBox: TextBox): boolean;
@@ -447,11 +459,36 @@ export function resolveTextBoxFillColor(textBox: TextBox): string | undefined;
 // @public
 export function resolveTextBoxOutlineColor(textBox: TextBox): string | undefined;
 
+// @public (undocumented)
+export function serializeStyles(originalStylesXml: string | undefined, styleDefinitions: StyleDefinitions): string;
+
+// @public (undocumented)
+export interface StyleDefinitionPatch extends Partial<Omit<Style, 'styleId'>> {
+    alignment?: ParagraphFormatting['alignment'];
+    bold?: boolean;
+    color?: string | ColorValue;
+    fontSize?: number;
+    italic?: boolean;
+    styleId?: string;
+}
+
+// @public (undocumented)
+export type StyleOverrides = Record<string, StyleDefinitionPatch | null | undefined>;
+
 // @public
 export type TableParserFn = (node: Element_2, styles: StyleMap | null, theme: Theme | null, numbering: NumberingMap | null, rels?: RelationshipMap | null, media?: Map<string, MediaFile>) => Table;
 
 // @public
+export type TableStyleCondition = NonNullable<Style['tblStylePr']>[number];
+
+// @public (undocumented)
+export function updateDocDefaults(styleDefinitions: StyleDefinitions | undefined, patch: Partial<DocDefaults>): StyleDefinitions;
+
+// @public
 export function updateMultipleFiles(originalBuffer: ArrayBuffer, updates: Map<string, string | ArrayBuffer>, options?: RepackOptions): Promise<ArrayBuffer>;
+
+// @public (undocumented)
+export function updateStyleDefinition(styleDefinitions: StyleDefinitions | undefined, styleId: string, patch: StyleDefinitionPatch): StyleDefinitions;
 
 // @public
 export function validatePatchSafety(originalXml: string, serializedXml: string, changedIds: Set<string>): PatchValidationResult;
