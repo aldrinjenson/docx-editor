@@ -1,5 +1,21 @@
 # @eigenpal/docx-editor-core
 
+## 1.6.2
+
+### Patch Changes
+
+- a8bce7a: Fix DOCX export validation at the source: normalize out-of-range paraId/textId and drop orphan comment anchors when parsing, preserve internal-target hyperlinks instead of rewriting them as external, unwrap targetless hyperlinks, and always emit a valid table grid.
+- 768b10e: Redesign the document outline toggle as a filled circular button in the left gutter (instead of a bare icon), tighten the outline panel's indentation, and keep the toggle and panel clear of the vertical ruler and of landscape pages.
+
+## 1.6.1
+
+### Patch Changes
+
+- 26a048f: Fix footnote rendering for footnotes referenced inside multi-page tables: reference marks now render superscript, the footnote-area number matches the note text's font, and a table that splits across pages distributes its footnotes to the page holding each row instead of dumping them all on the first table page.
+- 74ae87d: Preserve paragraph counts when DOCX imports contain leading hard page breaks. Fixes #830
+- a89af59: Preserve DOCX run boundaries during no-op ProseMirror round trips.
+- 6550426: Superscript and subscript text (including footnote/endnote reference marks) no longer increases the height of the line it sits on, matching Word.
+
 ## 1.6.0
 
 ### Patch Changes
