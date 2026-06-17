@@ -276,29 +276,37 @@
  * DOCUMENT SCROLLBAR
  * ============================================================================ */
 
-.ep-root .docx-editor__scroll-container {
-  scrollbar-gutter: stable;
+.ep-root .docx-editor__scroll-container,
+.ep-root .docx-editor-vue__pages-viewport {
   scrollbar-width: auto;
   scrollbar-color: var(--doc-scrollbar-thumb) var(--doc-scrollbar-track);
 }
 
-.ep-root .docx-editor__scroll-container::-webkit-scrollbar {
+.ep-root .docx-editor__scroll-container {
+  scrollbar-gutter: stable;
+}
+
+.ep-root .docx-editor__scroll-container::-webkit-scrollbar,
+.ep-root .docx-editor-vue__pages-viewport::-webkit-scrollbar {
   width: var(--doc-scrollbar-size);
   height: var(--doc-scrollbar-size);
 }
 
-.ep-root .docx-editor__scroll-container::-webkit-scrollbar-track {
+.ep-root .docx-editor__scroll-container::-webkit-scrollbar-track,
+.ep-root .docx-editor-vue__pages-viewport::-webkit-scrollbar-track {
   background: var(--doc-scrollbar-track);
 }
 
-.ep-root .docx-editor__scroll-container::-webkit-scrollbar-thumb {
+.ep-root .docx-editor__scroll-container::-webkit-scrollbar-thumb,
+.ep-root .docx-editor-vue__pages-viewport::-webkit-scrollbar-thumb {
   background: var(--doc-scrollbar-thumb);
   border: 3px solid transparent;
   border-radius: 9999px;
   background-clip: content-box;
 }
 
-.ep-root .docx-editor__scroll-container:hover::-webkit-scrollbar-thumb {
+.ep-root .docx-editor__scroll-container:hover::-webkit-scrollbar-thumb,
+.ep-root .docx-editor-vue__pages-viewport:hover::-webkit-scrollbar-thumb {
   background: var(--doc-scrollbar-thumb-hover);
   border: 3px solid transparent;
   border-radius: 9999px;
