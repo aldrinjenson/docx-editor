@@ -84,6 +84,7 @@
       "scrollToCommentId",
       "scrollToContentControl",
       "scrollToPage",
+      "scrollToParaId",
       "scrollToPosition",
       "setContentControlContent",
       "setContentControlValue",
@@ -106,7 +107,6 @@
       "proposeChange": "Inherited via EditorRefLike. Identical signature on both adapters.",
       "replyToComment": "Inherited via EditorRefLike. Identical signature on both adapters.",
       "resolveComment": "Inherited via EditorRefLike. Identical signature on both adapters.",
-      "scrollToParaId": "Inherited via EditorRefLike. Identical signature on both adapters.",
       "setParagraphStyle": "Inherited via EditorRefLike. Identical signature on both adapters."
     },
     "vueExclusive": {
