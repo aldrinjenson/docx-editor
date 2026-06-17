@@ -28,9 +28,7 @@
         <template #title-bar-right><slot name="title-bar-right" /></template>
       </DocxEditorMenuBar>
 
-      <!-- Toolbar pill: formatting buttons + editing-mode dropdown. TableToolbar
-           renders into the `table-context` slot (inline in the same pill); the
-           slot is empty when the cursor isn't in a table. -->
+      <!-- Toolbar pill: formatting buttons + editing-mode dropdown. TableToolbar renders in the table-context slot. -->
 
       <Toolbar
         v-if="showToolbar"
@@ -1080,7 +1078,6 @@ onBeforeUnmount(() => {
   tableResizeCleanup?.();
 });
 
-// =========================================================================
 // Selection & caret overlay — useSelectionSync owns the implementation.
 //
 // These wrappers MUST stay as hoisted `function` declarations. The
@@ -1090,8 +1087,6 @@ onBeforeUnmount(() => {
 // because `useDocxEditor` runs before `useSelectionSync` here. Function
 // declarations are hoisted, so the closure resolves at call time
 // (after script-setup finishes and `selectionSync` exists).
-// =========================================================================
-
 function clearOverlay() {
   selectionSync.clearOverlay();
 }
