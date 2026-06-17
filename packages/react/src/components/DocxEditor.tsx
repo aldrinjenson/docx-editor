@@ -1620,6 +1620,7 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
     overflow: 'auto', // Sole scroll container — PagedEditor sizes to content
     position: 'relative',
     overflowAnchor: 'none',
+    scrollbarGutter: 'stable',
   };
 
   // Render loading state
