@@ -28,7 +28,9 @@
         <template #title-bar-right><slot name="title-bar-right" /></template>
       </DocxEditorMenuBar>
 
-      <!-- Toolbar pill: formatting buttons + editing-mode dropdown. TableToolbar renders in the table-context slot. -->
+      <!-- Toolbar pill: formatting buttons + editing-mode dropdown. TableToolbar
+           renders into the `table-context` slot (inline in the same pill); the
+           slot is empty when the cursor isn't in a table. -->
 
       <Toolbar
         v-if="showToolbar"
@@ -1079,14 +1081,11 @@ onBeforeUnmount(() => {
 });
 
 // Selection & caret overlay — useSelectionSync owns the implementation.
-//
-// These wrappers MUST stay as hoisted `function` declarations. The
-// `useDocxEditor({ onSelectionUpdate })` call earlier in this script
-// closes over `updateSelectionOverlay` by name; if these were rewritten
-// as `const updateSelectionOverlay = ...`, the closure would TDZ-crash
-// because `useDocxEditor` runs before `useSelectionSync` here. Function
-// declarations are hoisted, so the closure resolves at call time
-// (after script-setup finishes and `selectionSync` exists).
+// These wrappers MUST stay hoisted `function` declarations: `useDocxEditor`
+// (above) closes over `updateSelectionOverlay` by name and runs before
+// `useSelectionSync`, so a `const` form would TDZ-crash; hoisting resolves
+// it at call time, after `selectionSync` exists.
+
 function clearOverlay() {
   selectionSync.clearOverlay();
 }
