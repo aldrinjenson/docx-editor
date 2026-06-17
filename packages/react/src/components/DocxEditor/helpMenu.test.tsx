@@ -71,7 +71,8 @@ describe('Help menu visibility', () => {
   test('showHelpMenu=false hides the Help menu but keeps the other menus', () => {
     const toolbar = renderToolbar({ showHelpMenu: false });
     expect(toolbar.queryByRole('button', { name: 'Help' })).toBeNull();
-    // The rest of the menu bar is untouched.
+    // The rest of the menu bar is untouched — hiding Help must not collapse the bar.
+    expect(toolbar.getByRole('button', { name: 'File' })).toBeTruthy();
     expect(toolbar.getByRole('button', { name: 'Format' })).toBeTruthy();
     expect(toolbar.getByRole('button', { name: 'Insert' })).toBeTruthy();
   });
