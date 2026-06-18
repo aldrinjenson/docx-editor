@@ -88,6 +88,46 @@ describe('numbering.xml generation on createDocx', () => {
     expect(collectNumberingFromPM(pmDoc)).toBeUndefined();
   });
 
+  test('serializeNumberingXml emits w:suff before w:lvlText (ECMA-376 CT_Lvl order)', () => {
+    const xml = serializeNumberingXml({
+      abstractNums: [
+        {
+          abstractNumId: 0,
+          levels: [
+            {
+              ilvl: 0,
+              start: 1,
+              numFmt: 'decimal',
+              lvlText: '%1.',
+              suffix: 'space',
+              lvlJc: 'left',
+            },
+          ],
+        },
+      ],
+      nums: [{ numId: 1, abstractNumId: 0 }],
+    });
+
+    const suff = xml.indexOf('<w:suff');
+    const lvlText = xml.indexOf('<w:lvlText');
+    const lvlJc = xml.indexOf('<w:lvlJc');
+    expect(suff).toBeGreaterThan(-1);
+    expect(suff).toBeLessThan(lvlText);
+    expect(lvlText).toBeLessThan(lvlJc);
+  });
+
+  test('collectNumberingFromPM applies startOverride to the level it was set on', () => {
+    const nested = schema.nodes.paragraph.create(
+      { numPr: { numId: 5, ilvl: 1 }, listNumFmt: 'decimal', listStartOverride: 3 },
+      schema.text('Nested item with a custom start')
+    );
+    const pmDoc = schema.nodes.doc.create(null, nested);
+
+    const defs = collectNumberingFromPM(pmDoc);
+    const num = defs!.nums.find((n) => n.numId === 5);
+    expect(num?.levelOverrides).toEqual([{ ilvl: 1, startOverride: 3 }]);
+  });
+
   test('createDocx synthesizes numbering.xml and registers it for documents with lists', async () => {
     const doc = createEmptyDocument();
     doc.package.document.content = [

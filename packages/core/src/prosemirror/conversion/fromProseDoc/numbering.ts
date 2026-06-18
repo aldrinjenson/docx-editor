@@ -79,7 +79,8 @@ export function collectNumberingFromPM(pmDoc: PMNode): NumberingDefinitions | un
   };
 
   const numIdToAbstract = new Map<number, number>();
-  const numIdStartOverride = new Map<number, number>();
+  // numId → (ilvl → startOverride): an override targets the level it was set on.
+  const numIdLevelStartOverride = new Map<number, Map<number, number>>();
   // abstractNumId → (ilvl → level)
   const abstractLevels = new Map<number, Map<number, ListLevel>>();
 
@@ -98,8 +99,13 @@ export function collectNumberingFromPM(pmDoc: PMNode): NumberingDefinitions | un
           : nextSyntheticAbstract();
       numIdToAbstract.set(numId, abstractNumId);
     }
-    if (attrs.listStartOverride !== undefined && !numIdStartOverride.has(numId)) {
-      numIdStartOverride.set(numId, attrs.listStartOverride);
+    if (attrs.listStartOverride !== undefined) {
+      let levelOverrides = numIdLevelStartOverride.get(numId);
+      if (!levelOverrides) {
+        levelOverrides = new Map<number, number>();
+        numIdLevelStartOverride.set(numId, levelOverrides);
+      }
+      if (!levelOverrides.has(ilvl)) levelOverrides.set(ilvl, attrs.listStartOverride);
     }
 
     let levels = abstractLevels.get(abstractNumId);
@@ -134,9 +140,11 @@ export function collectNumberingFromPM(pmDoc: PMNode): NumberingDefinitions | un
   const nums: NumberingInstance[] = [...numIdToAbstract.entries()]
     .map(([numId, abstractNumId]) => {
       const instance: NumberingInstance = { numId, abstractNumId };
-      const startOverride = numIdStartOverride.get(numId);
-      if (startOverride !== undefined) {
-        instance.levelOverrides = [{ ilvl: 0, startOverride }];
+      const levelOverrides = numIdLevelStartOverride.get(numId);
+      if (levelOverrides && levelOverrides.size > 0) {
+        instance.levelOverrides = [...levelOverrides.entries()]
+          .sort((a, b) => a[0] - b[0])
+          .map(([ilvl, startOverride]) => ({ ilvl, startOverride }));
       }
       return instance;
     })

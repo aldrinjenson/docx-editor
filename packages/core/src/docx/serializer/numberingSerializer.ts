@@ -29,12 +29,14 @@ function serializeLevel(level: ListLevel): string {
     parts.push(`<w:start w:val="${intAttr(level.start)}"/>`);
   }
   parts.push(`<w:numFmt w:val="${escapeXml(level.numFmt)}"/>`);
+  // ECMA-376 §17.9.6 CT_Lvl child order: start, numFmt, …, suff, lvlText, …,
+  // lvlJc, pPr, rPr — so w:suff must precede w:lvlText and w:lvlJc follows it.
+  if (level.suffix) {
+    parts.push(`<w:suff w:val="${level.suffix}"/>`);
+  }
   parts.push(`<w:lvlText w:val="${escapeXml(level.lvlText)}"/>`);
   if (level.lvlJc) {
     parts.push(`<w:lvlJc w:val="${level.lvlJc}"/>`);
-  }
-  if (level.suffix) {
-    parts.push(`<w:suff w:val="${level.suffix}"/>`);
   }
   // Reuse the paragraph indentation serializer — a level's `pPr` is a
   // ParagraphFormatting, so `<w:ind>` comes out identical to body paragraphs.
