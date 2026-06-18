@@ -85,14 +85,19 @@ function extractRunFormatting(marks: readonly Mark[], theme?: Theme | null): Run
 
       case 'fontSize': {
         const attrs = mark.attrs as FontSizeAttrs;
-        // Convert half-points to points
-        formatting.fontSize = attrs.size / 2;
+        const isRtl = marks.some((m) => m.type.name === 'rtl');
+        const size = isRtl && attrs.sizeCs != null ? attrs.sizeCs : attrs.size;
+        // Convert half-points to points (size may be null when only sizeCs is set)
+        if (size != null) {
+          formatting.fontSize = size / 2;
+        }
         break;
       }
 
       case 'fontFamily': {
         const attrs = mark.attrs as FontFamilyAttrs;
-        formatting.fontFamily = attrs.ascii || attrs.hAnsi;
+        const isRtl = marks.some((m) => m.type.name === 'rtl');
+        formatting.fontFamily = isRtl && attrs.cs ? attrs.cs : attrs.ascii || attrs.hAnsi;
         break;
       }
 

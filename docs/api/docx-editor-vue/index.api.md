@@ -23,6 +23,7 @@ import { FontOption } from '@eigenpal/docx-editor-core/utils/fontOptions';
 import { MaybeRef } from 'vue';
 import { Plugin as Plugin_2 } from 'prosemirror-state';
 import { PMContentControl } from '@eigenpal/docx-editor-core/prosemirror';
+import { ScrollToParaIdOptions } from '@eigenpal/docx-editor-core/utils';
 import { SelectionState } from '@eigenpal/docx-editor-core/prosemirror';
 import { StyleValue } from 'vue';
 import { TFunction } from '@eigenpal/docx-editor-i18n';
@@ -42,7 +43,7 @@ export { DocxEditor }
 
 // @public
 export interface DocxEditorHandle extends EditorHandle {
-    scrollToParaId: (paraId: string) => boolean;
+    scrollToParaId: (paraId: string, options?: ScrollToParaIdOptions) => boolean;
     scrollToPosition: (pmPos: number) => void;
     setZoom: (zoom: number) => void;
 }
@@ -73,11 +74,13 @@ export interface DocxEditorProps {
     onEditorViewReady?: (view: EditorView) => void;
     onError?: (error: Error) => void;
     onModeChange?: (mode: EditorMode) => void;
+    onOpen?: (file: File) => void | Promise<void>;
     onPrint?: () => void;
     onSelectionChange?: (state: SelectionState | null) => void;
     readOnly?: boolean;
     renderLogo?: () => VNodeChild;
     renderTitleBarRight?: () => VNodeChild;
+    showFileOpen?: boolean;
     showMenuBar?: boolean;
     showOutline?: boolean;
     showOutlineButton?: boolean;
@@ -97,6 +100,7 @@ export type DocxEditorRef = EditorRefLike & {
     setZoom(zoom: number): void;
     getZoom(): number;
     focus(): void;
+    scrollToParaId(paraId: string, options?: ScrollToParaIdOptions): boolean;
     scrollToPage(pageNumber: number): void;
     scrollToPosition(pmPos: number): void;
     scrollToCommentId(commentId: number): boolean;
