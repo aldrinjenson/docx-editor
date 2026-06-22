@@ -611,7 +611,7 @@ export function resolveHeaderFooter(doc: Document_2 | null, sp: SectionPropertie
 };
 
 // @public (undocumented)
-export function resolveHeaderFooterVisualTop(run: ImageRun, paragraphY: number, flowHeight: number, metrics: HeaderFooterMetrics): number;
+export function resolveHeaderFooterVisualTop(run: HeaderFooterPositionedVisual, paragraphY: number, flowHeight: number, metrics: HeaderFooterMetrics): number;
 
 // @public
 export function resolveListTemplate(template: string, counters: number[], levelNumFmts: NumberFormat[] | undefined): string;

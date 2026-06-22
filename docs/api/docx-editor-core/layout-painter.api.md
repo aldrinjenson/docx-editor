@@ -209,6 +209,7 @@ export interface RenderPageOptions {
     };
     pageClassName?: string;
     resolvedCommentIds?: Set<number>;
+    sectionHeaderFooterContent?: Record<number, SectionHeaderFooterRenderContent>;
     showBorders?: boolean;
     showShadow?: boolean;
     theme?: Theme | null;
@@ -239,6 +240,24 @@ export function resolveAnchoredObjectPosition(object: AnchoredObjectPositionInpu
 
 // @public
 export function resolveAnchoredObjectVerticalTop(object: AnchoredObjectPositionInput, fragmentY: number, geometry?: PageGeometry): number;
+
+// @public (undocumented)
+export interface SectionHeaderFooterRenderContent {
+    // (undocumented)
+    firstPageFooterContent?: HeaderFooterContent;
+    // (undocumented)
+    firstPageHeaderContent?: HeaderFooterContent;
+    // (undocumented)
+    footerContent?: HeaderFooterContent;
+    // (undocumented)
+    footerDistance?: number;
+    // (undocumented)
+    headerContent?: HeaderFooterContent;
+    // (undocumented)
+    headerDistance?: number;
+    // (undocumented)
+    titlePg?: boolean;
+}
 
 // @public
 export function sliceRunsForLine(block: ParagraphBlock, line: MeasuredLine): Run[];

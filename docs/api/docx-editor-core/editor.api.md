@@ -83,6 +83,8 @@ export interface LayoutComputation {
     // (undocumented)
     pageBorders: SectionProperties['pageBorders'] | undefined;
     // (undocumented)
+    sectionHeaderFooterContentForRender: Record<number, SectionHeaderFooterRenderContent> | undefined;
+    // (undocumented)
     watermark: Watermark | undefined;
 }
 

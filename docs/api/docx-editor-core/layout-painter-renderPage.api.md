@@ -99,6 +99,7 @@ export interface FloatingImagePaintRecord {
     x: number;
     // (undocumented)
     y: number;
+    zIndex?: number;
 }
 
 // @public (undocumented)
@@ -277,6 +278,7 @@ export interface RenderPageOptions {
     };
     pageClassName?: string;
     resolvedCommentIds?: Set<number>;
+    sectionHeaderFooterContent?: Record<number, SectionHeaderFooterRenderContent>;
     showBorders?: boolean;
     showShadow?: boolean;
     theme?: Theme | null;

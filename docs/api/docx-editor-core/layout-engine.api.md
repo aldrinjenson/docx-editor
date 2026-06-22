@@ -255,6 +255,7 @@ export type ImageBlock = {
         behindDoc?: boolean;
     };
     hlinkHref?: string;
+    zIndex?: number;
     pmStart?: number;
     pmEnd?: number;
 };
@@ -295,6 +296,7 @@ export type ImageRun = {
     cropBottom?: number;
     cropLeft?: number;
     opacity?: number;
+    zIndex?: number;
     isInsertion?: boolean;
     isDeletion?: boolean;
     changeAuthor?: string;
@@ -439,6 +441,7 @@ export type Page = {
     };
     orientation?: 'portrait' | 'landscape';
     sectionIndex?: number;
+    sectionPageNumber?: number;
     headerFooterRefs?: {
         headerDefault?: string;
         headerFirst?: string;
@@ -851,6 +854,7 @@ export type TextBoxBlock = {
     distBottom?: number;
     distLeft?: number;
     distRight?: number;
+    zIndex?: number;
     pmStart?: number;
     pmEnd?: number;
 };

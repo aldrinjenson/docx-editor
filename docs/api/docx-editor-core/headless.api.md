@@ -657,6 +657,8 @@ interface Image_2 {
     outline?: ShapeOutline;
     padding?: ImagePadding;
     position?: ImagePosition;
+    relativeHeight?: number;
+    renderSrc?: string;
     rId: string;
     size: ImageSize;
     src?: string;

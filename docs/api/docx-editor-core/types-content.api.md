@@ -242,6 +242,8 @@ interface Image_2 {
     outline?: ShapeOutline;
     padding?: ImagePadding;
     position?: ImagePosition;
+    relativeHeight?: number;
+    renderSrc?: string;
     rId: string;
     size: ImageSize;
     src?: string;
@@ -617,6 +619,7 @@ export interface Shape {
     name?: string;
     outline?: ShapeOutline;
     position?: ImagePosition;
+    relativeHeight?: number;
     shapeType: ShapeType;
     size: ImageSize;
     textBody?: ShapeTextBody;
@@ -796,6 +799,7 @@ export interface TextBox {
     };
     outline?: ShapeOutline;
     position?: ImagePosition;
+    relativeHeight?: number;
     size: ImageSize;
     // (undocumented)
     type: 'textBox';
