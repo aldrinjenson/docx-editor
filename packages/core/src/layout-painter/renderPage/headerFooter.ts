@@ -27,6 +27,8 @@ import { renderTextBoxFragment } from '../renderTextBox';
 import { emuToPixels } from '../../utils/units';
 import type { RenderContext, RenderPageOptions } from '../renderPage';
 
+const DEFAULT_ANCHOR_Z_INDEX = 251658240;
+
 /**
  * Header/footer content for rendering
  */
@@ -233,6 +235,7 @@ export function renderHeaderFooterContent(
     width: number;
     height: number;
     alt?: string;
+    zIndex?: number;
     paragraphY: number; // Y position of the containing paragraph
     position: {
       horizontal?: {
@@ -276,6 +279,7 @@ export function renderHeaderFooterContent(
             width: number;
             height: number;
             alt?: string;
+            zIndex?: number;
             position: {
               horizontal?: {
                 relativeTo?: string;
@@ -296,6 +300,7 @@ export function renderHeaderFooterContent(
             width: imgRun.width,
             height: imgRun.height,
             alt: imgRun.alt,
+            zIndex: imgRun.zIndex,
             paragraphY: paragraphStartY, // Store where this paragraph starts
             position: imgRun.position,
           });
@@ -428,7 +433,10 @@ export function renderHeaderFooterContent(
         width: measure.width,
         height: measure.height,
         isFloating: block.displayMode === 'float',
-        zIndex: block.displayMode === 'float' ? getHeaderFooterTextBoxZIndex(block) : undefined,
+        zIndex:
+          block.displayMode === 'float'
+            ? (block.zIndex ?? DEFAULT_ANCHOR_Z_INDEX + getHeaderFooterTextBoxZIndex(block))
+            : undefined,
         pmStart: block.pmStart,
         pmEnd: block.pmEnd,
       };
@@ -503,6 +511,7 @@ export function renderHeaderFooterContent(
     img.style.height = `${floatImg.height}px`;
     img.style.maxWidth = 'none';
     img.style.maxHeight = 'none';
+    img.style.zIndex = String(floatImg.zIndex ?? DEFAULT_ANCHOR_Z_INDEX);
 
     applyHeaderFooterFloatHorizontalPosition(img, floatImg, layout);
     img.style.top = `${resolveHeaderFooterFloatTop(floatImg, layout)}px`;

@@ -338,6 +338,9 @@ export function createImageRun(node: PMNode): Run {
   if (attrs.allowOverlap !== undefined && attrs.allowOverlap !== null) {
     image.allowOverlap = attrs.allowOverlap;
   }
+  if (attrs.relativeHeight !== undefined && attrs.relativeHeight !== null) {
+    image.relativeHeight = attrs.relativeHeight;
+  }
 
   // Round-trip wp:effectExtent padding (px → EMU)
   if (

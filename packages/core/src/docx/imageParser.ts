@@ -383,7 +383,7 @@ export function resolveImageData(
   rId: string,
   rels: RelationshipMap | undefined,
   media: Map<string, MediaFile> | undefined
-): { src?: string; mimeType?: string; filename?: string } {
+): { src?: string; renderSrc?: string; mimeType?: string; filename?: string } {
   if (!rId || !rels) {
     return {};
   }
@@ -424,6 +424,7 @@ export function resolveImageData(
     if (mediaFile) {
       return {
         src: mediaFile.dataUrl || mediaFile.base64, // Use data URL or base64
+        renderSrc: mediaFile.renderDataUrl,
         mimeType: mediaFile.mimeType,
         filename,
       };
@@ -435,6 +436,7 @@ export function resolveImageData(
     if (altMediaFile) {
       return {
         src: altMediaFile.dataUrl || altMediaFile.base64,
+        renderSrc: altMediaFile.renderDataUrl,
         mimeType: altMediaFile.mimeType,
         filename,
       };
@@ -446,6 +448,7 @@ export function resolveImageData(
     if (prefixedMediaFile) {
       return {
         src: prefixedMediaFile.dataUrl || prefixedMediaFile.base64,
+        renderSrc: prefixedMediaFile.renderDataUrl,
         mimeType: prefixedMediaFile.mimeType,
         filename,
       };
@@ -527,6 +530,7 @@ function parseInline(
   if (props.title) image.title = props.title;
   if (props.decorative) image.decorative = true;
   if (imageData.src) image.src = imageData.src;
+  if (imageData.renderSrc) image.renderSrc = imageData.renderSrc;
   if (imageData.mimeType) image.mimeType = imageData.mimeType;
   if (imageData.filename) image.filename = imageData.filename;
   if (padding) image.padding = padding;
@@ -570,6 +574,7 @@ function parseAnchor(
 
   // Check behindDoc attribute
   const behindDoc = getAttribute(anchorEl, null, 'behindDoc') === '1';
+  const relativeHeight = parseNumericAttribute(anchorEl, null, 'relativeHeight');
 
   // OOXML defaults to "1" (true) when these attributes are absent. We only
   // record the value when the spec deviates from the default, so round-trip
@@ -632,6 +637,7 @@ function parseAnchor(
   if (props.title) image.title = props.title;
   if (props.decorative) image.decorative = true;
   if (imageData.src) image.src = imageData.src;
+  if (imageData.renderSrc) image.renderSrc = imageData.renderSrc;
   if (imageData.mimeType) image.mimeType = imageData.mimeType;
   if (imageData.filename) image.filename = imageData.filename;
   if (position) image.position = position;
@@ -641,6 +647,7 @@ function parseAnchor(
   if (opacity !== undefined) image.opacity = opacity;
   if (layoutInCell !== undefined) image.layoutInCell = layoutInCell;
   if (allowOverlap !== undefined) image.allowOverlap = allowOverlap;
+  if (relativeHeight !== undefined) image.relativeHeight = relativeHeight;
 
   // Resolve image hyperlink (a:hlinkClick)
   if (props.hlinkRId && rels) {

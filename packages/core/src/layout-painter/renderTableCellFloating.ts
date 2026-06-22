@@ -35,6 +35,8 @@ export interface CellFloatingImage {
   wrapText?: 'bothSides' | 'left' | 'right' | 'largest';
   /** Wrap type (square, tight, through, behind, inFront) */
   wrapType?: string;
+  /** Stack order hint from anchored drawing metadata. */
+  zIndex?: number;
   pmStart?: number;
   pmEnd?: number;
 }
@@ -129,6 +131,7 @@ export function extractCellFloatingImages(
         distRight,
         wrapText: imageWrapTextFromCssFloat(imgRun.cssFloat),
         wrapType: imgRun.wrapType,
+        zIndex: imgRun.zIndex,
         pmStart: imgRun.pmStart,
         pmEnd: imgRun.pmEnd,
       });

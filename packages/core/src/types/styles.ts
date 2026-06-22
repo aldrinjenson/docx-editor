@@ -314,4 +314,6 @@ export interface MediaFile {
   base64?: string;
   /** Data URL for direct use in src attributes */
   dataUrl?: string;
+  /** Browser-renderable preview URL when original media is unsupported. */
+  renderDataUrl?: string;
 }

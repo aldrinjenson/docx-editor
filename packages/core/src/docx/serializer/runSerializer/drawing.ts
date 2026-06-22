@@ -259,6 +259,7 @@ export function serializeDrawingContent(content: DrawingContent): string {
 
   // Floating (anchored) image
   const behindDoc = image.wrap.type === 'behind' ? '1' : '0';
+  const relativeHeight = image.relativeHeight ?? 251658240;
   const position = image.position
     ? serializePosition(image.position)
     : '<wp:positionH relativeFrom="column"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom="paragraph"><wp:posOffset>0</wp:posOffset></wp:positionV>';
@@ -266,7 +267,7 @@ export function serializeDrawingContent(content: DrawingContent): string {
 
   return [
     '<w:drawing>',
-    `<wp:anchor distT="${intAttr(distT)}" distB="${intAttr(distB)}" distL="${intAttr(distL)}" distR="${intAttr(distR)}" simplePos="0" relativeHeight="251658240" behindDoc="${behindDoc}" locked="0" layoutInCell="${image.layoutInCell === false ? '0' : '1'}" allowOverlap="${image.allowOverlap === false ? '0' : '1'}">`,
+    `<wp:anchor distT="${intAttr(distT)}" distB="${intAttr(distB)}" distL="${intAttr(distL)}" distR="${intAttr(distR)}" simplePos="0" relativeHeight="${intAttr(relativeHeight)}" behindDoc="${behindDoc}" locked="0" layoutInCell="${image.layoutInCell === false ? '0' : '1'}" allowOverlap="${image.allowOverlap === false ? '0' : '1'}">`,
     '<wp:simplePos x="0" y="0"/>',
     position,
     `<wp:extent cx="${intAttr(cx)}" cy="${intAttr(cy)}"/>`,
@@ -382,6 +383,7 @@ export function serializeShapeContent(content: ShapeContent): string {
 
   // Floating shape
   const behindDoc = shape.wrap?.type === 'behind' ? '1' : '0';
+  const relativeHeight = shape.relativeHeight ?? 251658240;
   const position = shape.position
     ? serializePosition(shape.position)
     : '<wp:positionH relativeFrom="column"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom="paragraph"><wp:posOffset>0</wp:posOffset></wp:positionV>';
@@ -389,7 +391,7 @@ export function serializeShapeContent(content: ShapeContent): string {
 
   return [
     '<w:drawing>',
-    `<wp:anchor distT="${intAttr(distT)}" distB="${intAttr(distB)}" distL="${intAttr(distL)}" distR="${intAttr(distR)}" simplePos="0" relativeHeight="251658240" behindDoc="${behindDoc}" locked="0" layoutInCell="1" allowOverlap="1">`,
+    `<wp:anchor distT="${intAttr(distT)}" distB="${intAttr(distB)}" distL="${intAttr(distL)}" distR="${intAttr(distR)}" simplePos="0" relativeHeight="${intAttr(relativeHeight)}" behindDoc="${behindDoc}" locked="0" layoutInCell="1" allowOverlap="1">`,
     '<wp:simplePos x="0" y="0"/>',
     position,
     `<wp:extent cx="${intAttr(cx)}" cy="${intAttr(cy)}"/>`,

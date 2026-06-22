@@ -190,6 +190,7 @@ export const ImageExtension = createNodeExtension({
     draggable: true,
     attrs: {
       src: {},
+      renderSrc: { default: null },
       alt: { default: null },
       title: { default: null },
       width: { default: null },
@@ -220,6 +221,7 @@ export const ImageExtension = createNodeExtension({
       effectExtentRight: { default: null },
       layoutInCell: { default: null },
       allowOverlap: { default: null },
+      relativeHeight: { default: null },
     },
     parseDOM: [
       {
@@ -228,6 +230,7 @@ export const ImageExtension = createNodeExtension({
           const element = dom as HTMLImageElement;
           return {
             src: element.getAttribute('src') || '',
+            renderSrc: element.dataset.renderSrc || undefined,
             alt: element.getAttribute('alt') || undefined,
             title: element.getAttribute('title') || undefined,
             width: element.width || undefined,
@@ -242,6 +245,9 @@ export const ImageExtension = createNodeExtension({
               : undefined,
             borderColor: element.dataset.borderColor || undefined,
             borderStyle: element.dataset.borderStyle || undefined,
+            relativeHeight: element.dataset.relativeHeight
+              ? Number(element.dataset.relativeHeight)
+              : undefined,
           };
         },
       },
@@ -249,10 +255,11 @@ export const ImageExtension = createNodeExtension({
     toDOM(node) {
       const attrs = node.attrs as ImageAttrs;
       const domAttrs: Record<string, string> = {
-        src: attrs.src,
+        src: attrs.renderSrc || attrs.src,
         class: 'docx-image',
       };
 
+      if (attrs.renderSrc) domAttrs['data-render-src'] = attrs.renderSrc;
       if (attrs.alt) domAttrs.alt = attrs.alt;
       if (attrs.title) domAttrs.title = attrs.title;
       if (attrs.rId) domAttrs['data-rid'] = attrs.rId;
@@ -263,6 +270,9 @@ export const ImageExtension = createNodeExtension({
       if (attrs.borderWidth) domAttrs['data-border-width'] = String(attrs.borderWidth);
       if (attrs.borderColor) domAttrs['data-border-color'] = attrs.borderColor;
       if (attrs.borderStyle) domAttrs['data-border-style'] = attrs.borderStyle;
+      if (attrs.relativeHeight != null) {
+        domAttrs['data-relative-height'] = String(attrs.relativeHeight);
+      }
 
       const styles: string[] = [];
 

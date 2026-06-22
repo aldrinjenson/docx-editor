@@ -611,7 +611,7 @@ function convertImage(node: PMNode, startPos: number, pageContentHeight?: number
   return {
     kind: 'image',
     id: nextBlockId(),
-    src: attrs.src as string,
+    src: ((attrs.renderSrc as string | null | undefined) || attrs.src) as string,
     width: constrained.width,
     height: constrained.height,
     alt: attrs.alt as string | undefined,
@@ -625,6 +625,7 @@ function convertImage(node: PMNode, startPos: number, pageContentHeight?: number
         }
       : undefined,
     hlinkHref: attrs.hlinkHref as string | undefined,
+    zIndex: attrs.relativeHeight as number | undefined,
     pmStart: startPos,
     pmEnd: startPos + node.nodeSize,
   };
@@ -675,6 +676,7 @@ function convertTextBoxNode(
     distBottom: attrs.distBottom as number | undefined,
     distLeft: attrs.distLeft as number | undefined,
     distRight: attrs.distRight as number | undefined,
+    zIndex: attrs.relativeHeight as number | undefined,
     pmStart: startPos,
     pmEnd: startPos + node.nodeSize,
   };

@@ -138,6 +138,8 @@ interface PageFloatingImage {
   cropLeft?: number;
   /** a:alphaModFix → opacity. */
   opacity?: number;
+  /** Stack order hint from anchored drawing metadata. */
+  zIndex?: number;
 }
 
 /**
@@ -442,6 +444,7 @@ function extractFloatingImagesFromParagraph(
       cropBottom: imgRun.cropBottom,
       cropLeft: imgRun.cropLeft,
       opacity: imgRun.opacity,
+      zIndex: imgRun.zIndex,
     });
   }
 
@@ -488,6 +491,7 @@ export function renderPage(
   const contentEl = doc.createElement('div');
   contentEl.className = PAGE_CLASS_NAMES.content;
   applyContentAreaStyles(contentEl, page);
+  contentEl.style.zIndex = '1';
 
   // Calculate content width for justify alignment
   const pageGeometry = pageGeometryFromPage(page);
@@ -882,6 +886,7 @@ export function renderPage(
     headerEl.style.width = `${headerContentWidth}px`;
     headerEl.style.height = `${interactiveHeaderHeight}px`;
     headerEl.style.minHeight = `${interactiveHeaderHeight}px`;
+    headerEl.style.zIndex = '0';
 
     let shouldClipHeader = !headerOverflows;
     if (options.headerContent && options.headerContent.blocks.length > 0) {
@@ -943,6 +948,7 @@ export function renderPage(
     footerEl.style.width = `${footerContentWidth}px`;
     footerEl.style.height = `${interactiveFooterHeight}px`;
     footerEl.style.minHeight = `${interactiveFooterHeight}px`;
+    footerEl.style.zIndex = '0';
 
     let shouldClipFooter = !footerOverflows;
     if (options.footerContent && options.footerContent.blocks.length > 0) {

@@ -4,6 +4,8 @@ import {
   hasImageVisualAttrs,
 } from './renderImage';
 
+const DEFAULT_FRONT_FLOAT_Z_INDEX = 251658240;
+
 /**
  * Minimum fields the floating-image painter needs. Page-level and cell-level
  * float records both satisfy this shape.
@@ -25,6 +27,8 @@ export interface FloatingImagePaintRecord {
   cropLeft?: number;
   /** a:alphaModFix -> CSS opacity. */
   opacity?: number;
+  /** Stack order hint from anchored drawing metadata. */
+  zIndex?: number;
 }
 
 export interface FloatingImagesLayerOptions {
@@ -35,7 +39,7 @@ export interface FloatingImagesLayerOptions {
    * `fullSize` uses `width/height = 100%` and adds `overflow: hidden` (used inside table cells).
    */
   sizing: 'inset0' | 'fullSize';
-  /** `behind` skips z-index so DOM order keeps the layer below body fragments. */
+  /** `behind` skips a layer z-index so DOM order keeps the layer below body fragments. */
   layerMode: 'front' | 'behind';
 }
 
@@ -62,9 +66,6 @@ export function renderFloatingImagesLayer(
     layer.style.overflow = 'hidden';
   }
   layer.style.pointerEvents = 'none';
-  if (options.layerMode === 'front') {
-    layer.style.zIndex = '10';
-  }
 
   for (const floatImg of floatingImages) {
     const container = doc.createElement('div');
@@ -73,6 +74,9 @@ export function renderFloatingImagesLayer(
     container.style.pointerEvents = 'auto';
     container.style.top = `${floatImg.y}px`;
     container.style.left = `${floatImg.x}px`;
+    if (floatImg.zIndex !== undefined || options.layerMode === 'front') {
+      container.style.zIndex = String(floatImg.zIndex ?? DEFAULT_FRONT_FLOAT_Z_INDEX);
+    }
     if (floatImg.pmStart !== undefined) container.dataset.pmStart = String(floatImg.pmStart);
     if (floatImg.pmEnd !== undefined) container.dataset.pmEnd = String(floatImg.pmEnd);
 

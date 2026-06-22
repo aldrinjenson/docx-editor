@@ -53,6 +53,7 @@ import { loadFontsWithMapping } from '../utils/fontLoader';
 import { loadEmbeddedFonts } from '../utils/embeddedFonts';
 import { parseFontTable } from './fontTableParser';
 import { type DocxInput, toArrayBuffer } from '../utils/docxInput';
+import { createTiffPreviewDataUrl } from './tiffPreview';
 
 // ============================================================================
 // PROGRESS CALLBACK
@@ -399,6 +400,8 @@ function buildMediaMap(raw: RawDocxContent, _rels: RelationshipMap): Map<string,
       data,
       dataUrl,
     };
+    const renderDataUrl = createBrowserRenderablePreview(mimeType, data);
+    if (renderDataUrl) mediaFile.renderDataUrl = renderDataUrl;
 
     // Store by path and also by relationship target path
     media.set(path, mediaFile);
@@ -436,6 +439,19 @@ function buildMediaMap(raw: RawDocxContent, _rels: RelationshipMap): Map<string,
   }
 
   return media;
+}
+
+function createBrowserRenderablePreview(mimeType: string, data: ArrayBuffer): string | undefined {
+  const normalizedMime = mimeType.toLowerCase();
+  if (
+    normalizedMime === 'image/tiff' ||
+    normalizedMime === 'image/tif' ||
+    normalizedMime === 'image/x-tiff' ||
+    normalizedMime === 'image/x-tif'
+  ) {
+    return createTiffPreviewDataUrl(data);
+  }
+  return undefined;
 }
 
 /**

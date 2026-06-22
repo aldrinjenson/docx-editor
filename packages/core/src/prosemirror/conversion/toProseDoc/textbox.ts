@@ -92,6 +92,7 @@ function extractTextBoxesFromParagraph(paragraph: Paragraph): {
               size: shape.size,
               position: shape.position,
               wrap: shape.wrap,
+              relativeHeight: shape.relativeHeight,
               fill: shape.fill,
               outline: shape.outline,
               content: shape.textBody.content,
@@ -136,6 +137,7 @@ function shapeToDecorativeTextBox(shape: Shape): TextBox {
     size: shape.size,
     position: shape.position,
     wrap: shape.wrap,
+    relativeHeight: shape.relativeHeight,
     fill: shape.fill,
     outline: shape.outline,
     content: [],
@@ -208,6 +210,7 @@ function convertTextBox(
       marginBottom,
       marginLeft,
       marginRight,
+      relativeHeight: textBox.relativeHeight,
       ...textBoxAnchorAttrsFromDocx(textBox),
     },
     contentNodes

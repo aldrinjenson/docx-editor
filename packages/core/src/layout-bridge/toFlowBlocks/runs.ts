@@ -380,17 +380,18 @@ export function paragraphToRuns(
       runs.push(run);
     } else if (child.type.name === 'image') {
       const attrs = child.attrs;
-      const constrained = constrainImageToPage(
-        (attrs.width as number) || 100,
-        (attrs.height as number) || 100,
-        _options.pageContentHeight
-      );
+      const rawWidth = (attrs.width as number) || 100;
+      const rawHeight = (attrs.height as number) || 100;
+      const isFloating = attrs.displayMode === 'float';
+      const constrained = isFloating
+        ? { width: rawWidth, height: rawHeight }
+        : constrainImageToPage(rawWidth, rawHeight, _options.pageContentHeight);
       // Carry the image's tracked-change marks so an inserted/deleted picture
       // paints in the revision color and resolves with the rest of the change.
       const changeFmt = extractRunFormatting(child.marks, theme);
       const run: ImageRun = {
         kind: 'image',
-        src: attrs.src as string,
+        src: ((attrs.renderSrc as string | null | undefined) || attrs.src) as string,
         width: constrained.width,
         height: constrained.height,
         alt: attrs.alt as string | undefined,
@@ -408,6 +409,7 @@ export function paragraphToRuns(
         cropBottom: attrs.cropBottom as number | undefined,
         cropLeft: attrs.cropLeft as number | undefined,
         opacity: attrs.opacity as number | undefined,
+        zIndex: attrs.relativeHeight as number | undefined,
         isInsertion: changeFmt.isInsertion,
         isDeletion: changeFmt.isDeletion,
         changeAuthor: changeFmt.changeAuthor,

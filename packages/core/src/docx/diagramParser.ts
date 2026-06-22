@@ -63,9 +63,15 @@ export function parseDiagramDrawingContent(
     container.name === 'wp:anchor'
       ? (parseAnchorWrap(container) ?? { type: 'inFront' })
       : { type: 'inline' };
+  const baseRelativeHeight =
+    container.name === 'wp:anchor'
+      ? parseNumericAttribute(container, null, 'relativeHeight')
+      : undefined;
 
   return findDescendantsByLocalName(root, 'sp')
-    .map((shapeEl, index) => parseDiagramShape(shapeEl, index, basePosition, baseWrap, baseSize))
+    .map((shapeEl, index) =>
+      parseDiagramShape(shapeEl, index, basePosition, baseWrap, baseSize, baseRelativeHeight)
+    )
     .filter((shape): shape is ShapeContent => shape !== null);
 }
 
@@ -100,7 +106,8 @@ function parseDiagramShape(
   index: number,
   basePosition: ImagePosition | undefined,
   baseWrap: ImageWrap,
-  baseSize: ImageSize
+  baseSize: ImageSize,
+  baseRelativeHeight: number | undefined
 ): ShapeContent | null {
   const text = findDescendantsByLocalName(shapeEl, 't')
     .map((el) => getTextContent(el))
@@ -150,6 +157,7 @@ function parseDiagramShape(
 
   const position = offsetPosition(basePosition, offset);
   if (position) shape.position = position;
+  if (baseRelativeHeight !== undefined) shape.relativeHeight = baseRelativeHeight;
 
   return { type: 'shape', shape };
 }

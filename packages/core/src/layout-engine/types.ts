@@ -193,6 +193,7 @@ export type ImageRun = {
   cropLeft?: number;
   /** a:alphaModFix → CSS opacity in [0, 1]. */
   opacity?: number;
+  zIndex?: number;
   /** Whether this picture is itself a tracked insertion (`<w:ins>`). */
   isInsertion?: boolean;
   /** Whether this picture is itself a tracked deletion (`<w:del>`). */
@@ -508,6 +509,7 @@ export type ImageBlock = {
   };
   /** Hyperlink URL for clickable image */
   hlinkHref?: string;
+  zIndex?: number;
   pmStart?: number;
   pmEnd?: number;
 };
@@ -598,6 +600,7 @@ export type TextBoxBlock = {
   distBottom?: number;
   distLeft?: number;
   distRight?: number;
+  zIndex?: number;
   pmStart?: number;
   pmEnd?: number;
 };
@@ -891,7 +894,6 @@ export type TextBoxFragment = FragmentBase & {
   height: number;
   /** True when positioned outside normal document flow. */
   isFloating?: boolean;
-  /** Stack order hint for anchored text boxes. */
   zIndex?: number;
 };
 

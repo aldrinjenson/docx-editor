@@ -40,12 +40,19 @@ import {
   getMidChainIndices,
   hasPageBreakBefore,
 } from './keep-together';
-import { isFloatingTextBoxBlock } from './textBoxFlow';
 import { buildTableRowBreakInfo, snapRowBreak } from './tableRowBreak';
 import { MIN_WRAP_SEGMENT_WIDTH } from '../layout-bridge/measuring/floatingZones';
 import { getParagraphFragmentPmRange } from './paragraphFragmentRange';
 import { balanceTerminalContinuousTextColumns } from './columnBalancing';
 import { getSpacingAfter, getSpacingBefore } from './paragraphSpacing';
+import {
+  continuousBreakPrecedesAnchoredTitle,
+  isFollowingBlockAnchorTextBox,
+} from './anchoredTitleBreak';
+import { collectSectionConfigs, type SectionLayoutConfig } from './sectionConfigs';
+import { isFloatingTextBoxBlock } from './textBoxFlow';
+
+export { collectSectionConfigs, type SectionLayoutConfig } from './sectionConfigs';
 
 // Default page size (US Letter in pixels at 96 DPI)
 const DEFAULT_PAGE_SIZE = { w: 816, h: 1056 };
@@ -58,56 +65,8 @@ const DEFAULT_MARGINS: PageMargins = {
   left: 96,
 };
 
-/**
- * Page-flow geometry resolved from a single section's properties.
- * Exported so the React paged editor can reuse the same shape when
- * measuring blocks per section width — keeping pagination and
- * measurement consistent.
- */
-export type SectionLayoutConfig = {
-  pageSize: { w: number; h: number };
-  margins: PageMargins;
-  /** Optional. Sections without explicit columns inherit `{ count: 1 }`. */
-  columns?: ColumnLayout;
-};
-
 const DEFAULT_COLUMNS: ColumnLayout = { count: 1, gap: 0 };
-
-/**
- * Walk `blocks` once and collect per-section geometry. `configs` has one
- * entry per section break plus a trailing `finalConfig`. `breakIndices` is
- * 1-to-1 with the inner break entries (same length as `configs.length - 1`).
- * Callers that need the break `type` can read it from
- * `(blocks[breakIndices[i]] as SectionBreakBlock).type`.
- *
- * @internal
- */
-export function collectSectionConfigs(
-  blocks: FlowBlock[],
-  initialConfig: SectionLayoutConfig,
-  finalConfig: SectionLayoutConfig
-): {
-  configs: SectionLayoutConfig[];
-  breakIndices: number[];
-} {
-  const configs: SectionLayoutConfig[] = [];
-  const breakIndices: number[] = [];
-  let previousConfig = initialConfig;
-  for (let i = 0; i < blocks.length; i++) {
-    if (blocks[i].kind !== 'sectionBreak') continue;
-    const sb = blocks[i] as SectionBreakBlock;
-    const config: SectionLayoutConfig = {
-      pageSize: sb.pageSize ?? previousConfig.pageSize,
-      margins: sb.margins ?? previousConfig.margins,
-      columns: sb.columns,
-    };
-    configs.push(config);
-    breakIndices.push(i);
-    previousConfig = config;
-  }
-  configs.push(finalConfig);
-  return { configs, breakIndices };
-}
+const DEFAULT_ANCHOR_Z_INDEX = 251658240;
 
 /**
  * Apply contextual spacing suppression (OOXML §17.3.1.9).
@@ -249,12 +208,24 @@ export function layoutDocument(
 
   // Process each block, tracking section break index with a counter (O(1) per break)
   let sectionIdx = 0;
+  const consumedPageBreakBefore = new Set<number>();
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i];
     const measure = measures[i];
 
+    const nextBlock = blocks[i + 1];
+    if (
+      isFollowingBlockAnchorTextBox(block) &&
+      nextBlock &&
+      hasPageBreakBefore(nextBlock) &&
+      !consumedPageBreakBefore.has(i + 1)
+    ) {
+      paginator.forcePageBreak();
+      consumedPageBreakBefore.add(i + 1);
+    }
+
     // Handle pageBreakBefore on paragraphs
-    if (hasPageBreakBefore(block)) {
+    if (hasPageBreakBefore(block) && !consumedPageBreakBefore.has(i)) {
       paginator.forcePageBreak();
     }
 
@@ -318,7 +289,11 @@ export function layoutDocument(
         // type but fall back to current break's type (preserves explicit 'continuous')
         const nextType = sectionBreakTypes[sectionIdx + 1] ?? sectionBreakTypes[sectionIdx];
         const nextSectionConfig = sectionConfigs[sectionIdx + 1] ?? initialConfig;
-        handleSectionBreak(block as SectionBreakBlock, paginator, nextSectionConfig, nextType);
+        const promotedType =
+          nextType === 'continuous' && continuousBreakPrecedesAnchoredTitle(blocks, i)
+            ? 'nextPage'
+            : nextType;
+        handleSectionBreak(block as SectionBreakBlock, paginator, nextSectionConfig, promotedType);
 
         const nextBreakIndex = breakIndices[sectionIdx + 1];
         const isTerminalSection = nextBreakIndex === undefined;
@@ -838,7 +813,7 @@ function layoutAnchoredImage(
     pmStart: block.pmStart,
     pmEnd: block.pmEnd,
     isAnchored: true,
-    zIndex: anchor.behindDoc ? -1 : 1,
+    zIndex: anchor.behindDoc ? -1 : (block.zIndex ?? DEFAULT_ANCHOR_Z_INDEX),
   };
 
   // Add directly to page without affecting cursor
@@ -869,7 +844,7 @@ function layoutTextBox(
       pmStart: block.pmStart,
       pmEnd: block.pmEnd,
       isFloating: true,
-      zIndex: block.wrapType === 'behind' ? -1 : 1,
+      zIndex: block.wrapType === 'behind' ? -1 : (block.zIndex ?? DEFAULT_ANCHOR_Z_INDEX),
     };
     state.page.fragments.push(fragment);
     return;

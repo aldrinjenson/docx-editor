@@ -368,6 +368,7 @@ function convertImage(image: Image): PMNode {
 
   return schema.node('image', {
     src: image.src || '',
+    renderSrc: image.renderSrc,
     alt: image.alt,
     title: image.title,
     width: widthPx,
@@ -398,6 +399,7 @@ function convertImage(image: Image): PMNode {
     effectExtentRight,
     layoutInCell: image.layoutInCell,
     allowOverlap: image.allowOverlap,
+    relativeHeight: image.relativeHeight,
   });
 }
 

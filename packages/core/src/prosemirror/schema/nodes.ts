@@ -210,6 +210,8 @@ export interface ImagePositionAttrs {
  */
 export interface ImageAttrs {
   src: string;
+  /** Browser-renderable preview source; original `src` remains the saved media. */
+  renderSrc?: string;
   alt?: string;
   title?: string;
   /** Width in pixels (already converted from EMU) */
@@ -271,6 +273,8 @@ export interface ImageAttrs {
   layoutInCell?: boolean;
   /** `wp:anchor allowOverlap`. Same tri-state convention as `layoutInCell`. */
   allowOverlap?: boolean;
+  /** `wp:anchor relativeHeight` stack-order hint for anchored drawings. */
+  relativeHeight?: number;
 }
 
 /**

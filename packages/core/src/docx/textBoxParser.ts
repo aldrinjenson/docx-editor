@@ -247,6 +247,9 @@ export function parseTextBox(drawingEl: XmlElement): TextBox | null {
   if (!container) return null;
 
   const isAnchor = container.name === 'wp:anchor';
+  const relativeHeight = isAnchor
+    ? parseNumericAttribute(container, null, 'relativeHeight')
+    : undefined;
 
   // Navigate to graphic data
   const graphic = findByFullName(container, 'a:graphic');
@@ -302,6 +305,7 @@ export function parseTextBox(drawingEl: XmlElement): TextBox | null {
   if (fill) textBox.fill = fill;
   if (outline) textBox.outline = outline;
   if (bodyProps.margins) textBox.margins = bodyProps.margins;
+  if (relativeHeight !== undefined) textBox.relativeHeight = relativeHeight;
 
   // Parse position for anchored text boxes
   if (isAnchor) {

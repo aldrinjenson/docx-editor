@@ -117,6 +117,12 @@ export interface Image {
   rId: string;
   /** Resolved image data (base64 or blob URL) */
   src?: string;
+  /**
+   * Browser-renderable preview source used when the original media type cannot
+   * be painted by common browsers. The original `src`/relationship stays intact
+   * for round-trip serialization.
+   */
+  renderSrc?: string;
   /** Image MIME type */
   mimeType?: string;
   /** Original filename */
@@ -139,6 +145,8 @@ export interface Image {
   padding?: ImagePadding;
   /** Source-image crop (fractional, OOXML `a:srcRect`). */
   crop?: ImageCrop;
+  /** `wp:anchor relativeHeight` stack-order hint for anchored drawings. */
+  relativeHeight?: number;
   /** Opacity in [0, 1] (OOXML `a:alphaModFix amt`). Undefined = fully opaque. */
   opacity?: number;
   /** Whether this is a decorative image */

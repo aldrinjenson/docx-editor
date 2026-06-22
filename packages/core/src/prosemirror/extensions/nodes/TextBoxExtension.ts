@@ -41,6 +41,8 @@ export interface TextBoxAttrs {
   wrapType?: string;
   /** OOXML wrapText direction for anchored text boxes */
   wrapText?: 'bothSides' | 'left' | 'right' | 'largest';
+  /** `wp:anchor relativeHeight` stack-order hint for anchored drawings. */
+  relativeHeight?: number;
   /** Display anchor relationship for exported text boxes */
   anchorTarget?: 'followingBlock';
   /** Anchor position copied from wp:positionH/wp:positionV */
@@ -80,6 +82,7 @@ export const TextBoxExtension = createNodeExtension({
       cssFloat: { default: null },
       wrapType: { default: 'inline' },
       wrapText: { default: null },
+      relativeHeight: { default: null },
       anchorTarget: { default: null },
       position: { default: null },
       distTop: { default: null },
@@ -109,6 +112,9 @@ export const TextBoxExtension = createNodeExtension({
             cssFloat: (el.dataset.cssFloat as TextBoxAttrs['cssFloat']) || undefined,
             wrapType: el.dataset.wrapType || undefined,
             wrapText: (el.dataset.wrapText as TextBoxAttrs['wrapText']) || undefined,
+            relativeHeight: el.dataset.relativeHeight
+              ? Number(el.dataset.relativeHeight)
+              : undefined,
             anchorTarget: (el.dataset.anchorTarget as TextBoxAttrs['anchorTarget']) || undefined,
             position: el.dataset.position ? JSON.parse(el.dataset.position) : undefined,
             distTop: el.dataset.distTop ? Number(el.dataset.distTop) : undefined,
@@ -142,6 +148,9 @@ export const TextBoxExtension = createNodeExtension({
       if (attrs.cssFloat) domAttrs['data-css-float'] = attrs.cssFloat;
       if (attrs.wrapType) domAttrs['data-wrap-type'] = attrs.wrapType;
       if (attrs.wrapText) domAttrs['data-wrap-text'] = attrs.wrapText;
+      if (attrs.relativeHeight != null) {
+        domAttrs['data-relative-height'] = String(attrs.relativeHeight);
+      }
       if (attrs.anchorTarget) domAttrs['data-anchor-target'] = attrs.anchorTarget;
       if (attrs.position) domAttrs['data-position'] = JSON.stringify(attrs.position);
       if (attrs.distTop != null) domAttrs['data-dist-top'] = String(attrs.distTop);

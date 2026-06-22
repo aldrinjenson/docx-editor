@@ -596,6 +596,9 @@ export function parseShapeFromDrawing(drawingEl: XmlElement): Shape | null {
   }
 
   const isAnchor = container.name === 'wp:anchor';
+  const relativeHeight = isAnchor
+    ? parseNumericAttribute(container, null, 'relativeHeight')
+    : undefined;
 
   // Navigate to graphic data
   const graphic = findByFullName(container, 'a:graphic');
@@ -621,6 +624,10 @@ export function parseShapeFromDrawing(drawingEl: XmlElement): Shape | null {
 
   // Parse position for anchored shapes
   if (isAnchor) {
+    if (relativeHeight !== undefined) {
+      shape.relativeHeight = relativeHeight;
+    }
+
     const position = parseAnchorPosition(container);
     if (position) {
       shape.position = position;

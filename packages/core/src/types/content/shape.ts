@@ -284,6 +284,8 @@ export interface Shape {
   position?: ImagePosition;
   /** Wrap settings */
   wrap?: ImageWrap;
+  /** `wp:anchor relativeHeight` stack-order hint for anchored drawings. */
+  relativeHeight?: number;
   /** Fill */
   fill?: ShapeFill;
   /** Outline/stroke */
@@ -309,6 +311,8 @@ export interface TextBox {
   position?: ImagePosition;
   /** Wrap settings */
   wrap?: ImageWrap;
+  /** `wp:anchor relativeHeight` stack-order hint for anchored drawings. */
+  relativeHeight?: number;
   /** Fill */
   fill?: ShapeFill;
   /** Outline */

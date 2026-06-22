@@ -70,6 +70,34 @@ function makeSeparatorContent(): HeaderFooterContent {
 }
 
 describe('renderPage header/footer paragraph spacing', () => {
+  test('stacks body content above header and footer bands', () => {
+    const page = makePage();
+    const headerContent = makeSeparatorContent();
+    const footerContent = makeSeparatorContent();
+
+    const el = renderPage(
+      page,
+      {
+        pageNumber: 1,
+        totalPages: 1,
+        section: 'body',
+      },
+      {
+        document,
+        headerContent,
+        footerContent,
+      }
+    );
+
+    const contentEl = el.querySelector<HTMLElement>(`.${PAGE_CLASS_NAMES.content}`);
+    const headerEl = el.querySelector<HTMLElement>(`.${PAGE_CLASS_NAMES.header}`);
+    const footerEl = el.querySelector<HTMLElement>(`.${PAGE_CLASS_NAMES.footer}`);
+
+    expect(contentEl?.style.zIndex).toBe('1');
+    expect(headerEl?.style.zIndex).toBe('0');
+    expect(footerEl?.style.zIndex).toBe('0');
+  });
+
   test('header paragraph honors explicit spacing.before in fragment positioning', () => {
     const page = makePage();
     const headerContent = makeSeparatorContent();
