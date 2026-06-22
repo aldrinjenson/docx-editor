@@ -485,9 +485,13 @@ function setParagraphAttrsCmd(attrs: Record<string, unknown>): Command {
  * @public
  */
 export interface GenerateTOCOptions {
-  /** Lowest heading level to include (1 = Heading 1). Default `1`. */
+  /**
+   * Lowest heading level to include (1 = Heading 1). Default `1`. Values are
+   * clamped to 1–9, and an inverted range (`minLevel > maxLevel`) is ordered
+   * rather than producing an empty TOC.
+   */
   minLevel?: number;
-  /** Highest heading level to include (e.g. `3` = Heading 3). Default `9`. */
+  /** Highest heading level to include (e.g. `3` = Heading 3). Default `9`. Clamped to 1–9. */
   maxLevel?: number;
   /**
    * TOC title text. Default `"Table of Contents"`. Pass `null` or `""` to omit
@@ -790,8 +794,15 @@ export const ParagraphExtension = createNodeExtension({
           setParagraphAttr('sectionBreakType', breakType),
         removeSectionBreak: () => setParagraphAttr('sectionBreakType', null),
         generateTOC: (options?: GenerateTOCOptions) => {
-          const minLevel = options?.minLevel ?? 1;
-          const maxLevel = options?.maxLevel ?? 9;
+          // Clamp the level range into the valid 1–9 band and tolerate an
+          // inverted range (min > max) by ordering the pair — a misconfigured
+          // range should produce a sensible TOC rather than silently filtering
+          // out every heading (which is indistinguishable from "no headings").
+          const rawMin = options?.minLevel ?? 1;
+          const rawMax = options?.maxLevel ?? 9;
+          const clampLevel = (n: number) => Math.min(Math.max(n, 1), 9);
+          const minLevel = clampLevel(Math.min(rawMin, rawMax));
+          const maxLevel = clampLevel(Math.max(rawMin, rawMax));
           const includeHyperlinks = options?.includeHyperlinks ?? true;
           // `undefined` (option omitted) keeps the default title; an explicit
           // `null` / `''` omits the title paragraph.

@@ -84,6 +84,22 @@ describe('generateTableOfContents — options', () => {
     expect(tocTitle(run(generateTableOfContents({ title: null })))).toBeNull();
   });
 
+  test('empty-string title also omits the title paragraph', () => {
+    expect(tocTitle(run(generateTableOfContents({ title: '' })))).toBeNull();
+  });
+
+  test('out-of-range levels are clamped into 1–9', () => {
+    // minLevel 0 (below Heading 1) and an oversized maxLevel both clamp, so
+    // every heading is still included rather than silently filtered out.
+    const entries = tocEntries(run(generateTableOfContents({ minLevel: 0, maxLevel: 99 })));
+    expect(entries.map((e) => e.text)).toEqual(['One', 'Two', 'Three']);
+  });
+
+  test('an inverted range (min > max) is ordered, not emptied', () => {
+    const entries = tocEntries(run(generateTableOfContents({ minLevel: 3, maxLevel: 1 })));
+    expect(entries.map((e) => e.text)).toEqual(['One', 'Two', 'Three']);
+  });
+
   test('includeHyperlinks:false yields plain-text entries', () => {
     const entries = tocEntries(run(generateTableOfContents({ includeHyperlinks: false })));
     expect(entries.map((e) => e.text)).toEqual(['One', 'Two', 'Three']);
