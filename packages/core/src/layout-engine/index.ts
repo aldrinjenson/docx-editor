@@ -281,7 +281,7 @@ export function layoutDocument(
 
     switch (block.kind) {
       case 'paragraph':
-        layoutParagraph(block, measure as ParagraphMeasure, paginator, paginator.getContentWidth());
+        layoutParagraph(block, measure as ParagraphMeasure, paginator);
         break;
 
       case 'table':
@@ -365,8 +365,7 @@ export function layoutDocument(
 function layoutParagraph(
   block: ParagraphBlock,
   measure: ParagraphMeasure,
-  paginator: ReturnType<typeof createPaginator>,
-  contentWidth: number
+  paginator: ReturnType<typeof createPaginator>
 ): void {
   if (measure.kind !== 'paragraph') {
     throw new Error(`layoutParagraph: expected paragraph measure`);
@@ -385,7 +384,7 @@ function layoutParagraph(
       blockId: block.id,
       x: paginator.getColumnX(state.columnIndex),
       y: state.cursorY + spaceBefore,
-      width: contentWidth,
+      width: paginator.columnWidth,
       height: 0,
       fromLine: 0,
       toLine: 0,
@@ -394,6 +393,7 @@ function layoutParagraph(
     };
 
     paginator.addFragment(fragment, 0, spaceBefore, spaceAfter);
+    fragment.width = paginator.columnWidth;
     return;
   }
 
@@ -455,7 +455,7 @@ function layoutParagraph(
       blockId: block.id,
       x: paginator.getColumnX(state.columnIndex),
       y: 0, // Will be set by addFragment
-      width: contentWidth,
+      width: paginator.columnWidth,
       height: linesHeight,
       fromLine: currentLineIndex,
       toLine: currentLineIndex + fittingLines,
@@ -472,6 +472,7 @@ function layoutParagraph(
       effectiveSpaceAfter
     );
     fragment.y = result.y;
+    fragment.width = paginator.columnWidth;
 
     currentLineIndex += fittingLines;
 
@@ -605,19 +606,10 @@ function layoutTable(
     const fragmentHeight = headerOverhead + used;
     const isLastFragment = toRow === rows.length && !lastRowPartial;
 
-    let desiredX = paginator.getColumnX(state.columnIndex);
-    if (block.justification === 'center') {
-      desiredX = desiredX + (paginator.columnWidth - measure.totalWidth) / 2;
-    } else if (block.justification === 'right') {
-      desiredX = desiredX + paginator.columnWidth - measure.totalWidth;
-    } else if (block.indent) {
-      desiredX += block.indent;
-    }
-
     const fragment: TableFragment = {
       kind: 'table',
       blockId: block.id,
-      x: desiredX,
+      x: paginator.getColumnX(state.columnIndex),
       y: 0, // Will be set by addFragment
       width: measure.totalWidth,
       height: fragmentHeight,
@@ -633,6 +625,16 @@ function layoutTable(
     };
 
     const result = paginator.addFragment(fragment, fragmentHeight, 0, 0);
+
+    let desiredX = result.x;
+    if (block.justification === 'center') {
+      desiredX += (paginator.columnWidth - measure.totalWidth) / 2;
+    } else if (block.justification === 'right') {
+      desiredX += paginator.columnWidth - measure.totalWidth;
+    } else if (block.indent) {
+      desiredX += block.indent;
+    }
+
     fragment.y = result.y;
     fragment.x = desiredX;
 
