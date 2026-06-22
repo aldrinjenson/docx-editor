@@ -14,6 +14,7 @@
 import type { Watermark, TextWatermark, PictureWatermark } from '../types/document';
 import type { Page } from '../layout-engine/types';
 import { resolveFontFamily } from '../utils/fontResolver';
+import { applyImageSourceForBrowser } from './renderImage';
 
 /** Class name on the watermark layer (stable for queries/tests). */
 export const WATERMARK_LAYER_CLASS = 'layout-watermark-layer';
@@ -69,7 +70,7 @@ function renderPictureWatermark(
   if (!wm.dataUrl) return null;
 
   const img = doc.createElement('img');
-  img.src = wm.dataUrl;
+  applyImageSourceForBrowser(img, wm.dataUrl);
   img.alt = '';
   img.style.position = 'absolute';
   img.style.top = '50%';

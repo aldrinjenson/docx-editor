@@ -35,6 +35,21 @@ function reparseSerializedImage(xml: string): Image | null {
 }
 
 describe('wp:srcRect crop round-trip', () => {
+  test('skip WordprocessingShape drawings that do not contain a picture blip', () => {
+    const img = parseDrawingFromXml(`
+      <wp:anchor distT="0" distB="0" distL="0" distR="0">
+        <wp:extent cx="10557673" cy="471805"/>
+        <wp:docPr id="1" name="Rectangle 2"/>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+            <wps:wsp xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"/>
+          </a:graphicData>
+        </a:graphic>
+      </wp:anchor>`);
+
+    expect(img).toBeNull();
+  });
+
   test('parse a:srcRect with all four sides', () => {
     const img = parseDrawingFromXml(`
       <wp:inline distT="0" distB="0" distL="0" distR="0">

@@ -18,7 +18,11 @@ import type {
 } from '../../layout-engine/types';
 import type { RenderContext } from '../renderPage';
 import { isFloatingImageRun } from '../floatingImageFlow';
-import { applyImageVisualAttrs, hasImageVisualAttrs } from '../renderImage';
+import {
+  applyImageSourceForBrowser,
+  applyImageVisualAttrs,
+  hasImageVisualAttrs,
+} from '../renderImage';
 import { resolveFontFamily } from '../../utils/fontResolver';
 import {
   PARAGRAPH_CLASS_NAMES,
@@ -454,7 +458,7 @@ function renderInlineImageRun(run: ImageRun, doc: Document): HTMLElement {
   const img = doc.createElement('img');
   img.className = `${PARAGRAPH_CLASS_NAMES.run} ${PARAGRAPH_CLASS_NAMES.image}`;
 
-  img.src = run.src;
+  applyImageSourceForBrowser(img, run.src);
   img.width = run.width;
   img.height = run.height;
   // Lock dimensions explicitly: when only the width/height attributes are set,
@@ -543,7 +547,7 @@ function renderBlockImage(run: ImageRun, doc: Document): HTMLElement {
   container.style.marginBottom = `${run.distBottom ?? 6}px`;
 
   const img = doc.createElement('img');
-  img.src = run.src;
+  applyImageSourceForBrowser(img, run.src);
   img.width = run.width;
   img.height = run.height;
   // Global CSS reset (Tailwind preflight) sets img { display: block },

@@ -39,6 +39,49 @@ export interface ImageVisualAttrs {
   opacity?: number;
 }
 
+const SAFE_IMAGE_SRC_RE = /^(?:data:|blob:|https?:)/i;
+
+const UNSUPPORTED_BROWSER_IMAGE_MIME_TYPES = new Set([
+  'image/tif',
+  'image/tiff',
+  'image/x-tif',
+  'image/x-tiff',
+  'image/x-emf',
+  'image/emf',
+  'image/x-wmf',
+  'image/wmf',
+]);
+
+function dataUrlMimeType(src: string): string | null {
+  const match = /^data:([^;,]+)/i.exec(src.trim());
+  return match ? match[1].toLowerCase() : null;
+}
+
+/**
+ * Browser paint support is narrower than DOCX media support. Preserve the
+ * image record for round-trip/export, but avoid painting formats Chromium
+ * cannot decode as a broken-image icon.
+ */
+export function isBrowserRenderableImageSrc(src: string | undefined): boolean {
+  if (!src) return false;
+  if (!SAFE_IMAGE_SRC_RE.test(src)) return false;
+  const mimeType = dataUrlMimeType(src);
+  return !mimeType || !UNSUPPORTED_BROWSER_IMAGE_MIME_TYPES.has(mimeType);
+}
+
+export function applyImageSourceForBrowser(img: HTMLImageElement, src: string | undefined): void {
+  if (isBrowserRenderableImageSrc(src)) {
+    img.src = src as string;
+    return;
+  }
+
+  img.removeAttribute('src');
+  img.dataset.unsupportedImage = 'true';
+  const mimeType = src ? dataUrlMimeType(src) : null;
+  if (mimeType) img.dataset.unsupportedImageMime = mimeType;
+  img.style.visibility = 'hidden';
+}
+
 /**
  * True when any visual attribute is set. Cheap call-site guard so the no-op
  * common case skips the function call and template-literal allocations.
@@ -172,7 +215,7 @@ export function renderImageFragment(
   // schemes — image bytes come from the (untrusted) document as data: URLs, so
   // anything else (e.g. a smuggled javascript:/external scheme) is dropped.
   const imgEl = doc.createElement('img');
-  imgEl.src = /^(?:data:|blob:|https?:)/i.test(block.src) ? block.src : '';
+  applyImageSourceForBrowser(imgEl, block.src);
   imgEl.alt = block.alt ?? '';
 
   // Image sizing

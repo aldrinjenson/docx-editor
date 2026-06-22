@@ -130,7 +130,8 @@ export type ParagraphParserFn = (
   styles: StyleMap | null,
   theme: Theme | null,
   numbering: NumberingMap | null,
-  rels?: RelationshipMap | null
+  rels?: RelationshipMap | null,
+  media?: Map<string, MediaFile> | null
 ) => Paragraph;
 
 /**
@@ -157,7 +158,7 @@ export function parseTextBoxContent(
   theme: Theme | null,
   numbering: NumberingMap | null,
   rels?: RelationshipMap | null,
-  _media?: Map<string, MediaFile>
+  media?: Map<string, MediaFile>
 ): Paragraph[] {
   if (!txbxContent) {
     return [];
@@ -173,7 +174,7 @@ export function parseTextBoxContent(
 
     if (localName === 'p') {
       // Parse paragraph
-      const paragraph = parseParagraph(child, styles, theme, numbering, rels);
+      const paragraph = parseParagraph(child, styles, theme, numbering, rels, media);
       paragraphs.push(paragraph);
     } else if (localName === 'tbl' && parseTable) {
       // Tables in text boxes - we can't directly include them in paragraphs array

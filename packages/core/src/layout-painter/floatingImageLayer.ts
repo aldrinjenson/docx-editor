@@ -1,4 +1,8 @@
-import { applyImageVisualAttrs, hasImageVisualAttrs } from './renderImage';
+import {
+  applyImageSourceForBrowser,
+  applyImageVisualAttrs,
+  hasImageVisualAttrs,
+} from './renderImage';
 
 /**
  * Minimum fields the floating-image painter needs. Page-level and cell-level
@@ -73,7 +77,7 @@ export function renderFloatingImagesLayer(
     if (floatImg.pmEnd !== undefined) container.dataset.pmEnd = String(floatImg.pmEnd);
 
     const img = doc.createElement('img');
-    img.src = floatImg.src;
+    applyImageSourceForBrowser(img, floatImg.src);
     img.style.width = `${floatImg.width}px`;
     img.style.height = `${floatImg.height}px`;
     img.style.display = 'block';

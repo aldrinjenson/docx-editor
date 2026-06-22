@@ -7,7 +7,13 @@
  */
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
-import { applyImageCrop, hasImageCrop, applyImageVisualAttrs } from '../renderImage';
+import {
+  applyImageCrop,
+  applyImageSourceForBrowser,
+  hasImageCrop,
+  applyImageVisualAttrs,
+  isBrowserRenderableImageSrc,
+} from '../renderImage';
 
 beforeAll(() => GlobalRegistrator.register());
 afterAll(() => GlobalRegistrator.unregister());
@@ -54,5 +60,29 @@ describe('applyImageCrop (#811)', () => {
     applyImageVisualAttrs(img, { cropTop: 0.2, cropBottom: 0.1, opacity: 0.5 });
     expect(img.style.objectFit).toBe('cover');
     expect(img.style.opacity).toBe('0.5');
+  });
+
+  test('unsupported browser image formats are hidden instead of painted broken', () => {
+    const img = document.createElement('img');
+    const tiff = 'data:image/tiff;base64,AAAA';
+
+    expect(isBrowserRenderableImageSrc(tiff)).toBe(false);
+    applyImageSourceForBrowser(img, tiff);
+
+    expect(img.getAttribute('src')).toBeNull();
+    expect(img.dataset.unsupportedImage).toBe('true');
+    expect(img.dataset.unsupportedImageMime).toBe('image/tiff');
+    expect(img.style.visibility).toBe('hidden');
+  });
+
+  test('browser-renderable image sources are kept', () => {
+    const img = document.createElement('img');
+    const png = 'data:image/png;base64,AAAA';
+
+    expect(isBrowserRenderableImageSrc(png)).toBe(true);
+    applyImageSourceForBrowser(img, png);
+
+    expect(img.getAttribute('src')).toBe(png);
+    expect(img.dataset.unsupportedImage).toBeUndefined();
   });
 });
