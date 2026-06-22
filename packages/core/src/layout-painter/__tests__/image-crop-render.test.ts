@@ -75,6 +75,18 @@ describe('applyImageCrop (#811)', () => {
     expect(img.style.visibility).toBe('hidden');
   });
 
+  test('missing image sources are hidden without unsupported-image diagnostics', () => {
+    const img = document.createElement('img');
+
+    expect(isBrowserRenderableImageSrc(undefined)).toBe(false);
+    applyImageSourceForBrowser(img, undefined);
+
+    expect(img.getAttribute('src')).toBeNull();
+    expect(img.dataset.unsupportedImage).toBeUndefined();
+    expect(img.dataset.unsupportedImageMime).toBeUndefined();
+    expect(img.style.visibility).toBe('hidden');
+  });
+
   test('browser-renderable image sources are kept', () => {
     const img = document.createElement('img');
     const png = 'data:image/png;base64,AAAA';

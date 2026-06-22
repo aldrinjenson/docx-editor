@@ -371,7 +371,7 @@ function layoutParagraph(
       blockId: block.id,
       x: paginator.getColumnX(state.columnIndex),
       y: state.cursorY + spaceBefore,
-      width: paginator.columnWidth,
+      width: 0,
       height: 0,
       fromLine: 0,
       toLine: 0,
@@ -442,7 +442,7 @@ function layoutParagraph(
       blockId: block.id,
       x: paginator.getColumnX(state.columnIndex),
       y: 0, // Will be set by addFragment
-      width: paginator.columnWidth,
+      width: 0, // Will be set after addFragment applies current section/column geometry
       height: linesHeight,
       fromLine: currentLineIndex,
       toLine: currentLineIndex + fittingLines,

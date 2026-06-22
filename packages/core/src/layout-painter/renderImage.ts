@@ -70,15 +70,21 @@ export function isBrowserRenderableImageSrc(src: string | undefined): boolean {
 }
 
 export function applyImageSourceForBrowser(img: HTMLImageElement, src: string | undefined): void {
+  delete img.dataset.unsupportedImage;
+  delete img.dataset.unsupportedImageMime;
+
   if (isBrowserRenderableImageSrc(src)) {
     img.src = src as string;
+    img.style.visibility = '';
     return;
   }
 
   img.removeAttribute('src');
-  img.dataset.unsupportedImage = 'true';
   const mimeType = src ? dataUrlMimeType(src) : null;
-  if (mimeType) img.dataset.unsupportedImageMime = mimeType;
+  if (src) {
+    img.dataset.unsupportedImage = 'true';
+    if (mimeType) img.dataset.unsupportedImageMime = mimeType;
+  }
   img.style.visibility = 'hidden';
 }
 

@@ -77,7 +77,9 @@ describe('issue #472 anchored text box render', () => {
     expect(textBox).not.toBeNull();
     expect(textBox?.style.left).toBe('218px');
     expect(textBox?.style.top).toBe('143px');
-    expect(textBox?.style.zIndex).toBe('1');
+    // Preserve the authored DrawingML z-order rather than collapsing every
+    // floating text box to a renderer-local default.
+    expect(textBox?.style.zIndex).toBe('251658240');
 
     const segments = [...pageEl.querySelectorAll<HTMLElement>('.layout-line-segment')];
     expect(segments.length).toBeGreaterThanOrEqual(2);
