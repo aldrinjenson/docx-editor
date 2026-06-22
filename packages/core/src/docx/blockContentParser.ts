@@ -200,6 +200,7 @@ function enrichParagraphTextBoxes(
       outline: textBox.outline,
       textBody: {
         content: textBox.content,
+        autoFit: textBox.autoFit,
         margins: textBox.margins,
       },
     };

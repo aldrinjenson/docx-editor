@@ -336,16 +336,27 @@ export function serializeShapeContent(content: ShapeContent): string {
       if (tb.margins.right != null) bpAttrs.push(`rIns="${intAttr(tb.margins.right)}"`);
       if (tb.margins.bottom != null) bpAttrs.push(`bIns="${intAttr(tb.margins.bottom)}"`);
     }
+    const autoFit =
+      tb.autoFit === 'none'
+        ? '<a:noAutofit/>'
+        : tb.autoFit === 'normal'
+          ? '<a:normAutofit/>'
+          : tb.autoFit === 'shape'
+            ? '<a:spAutoFit/>'
+            : '';
+    const bodyPr = autoFit
+      ? `<wps:bodyPr ${bpAttrs.join(' ')}>${autoFit}</wps:bodyPr>`
+      : `<wps:bodyPr ${bpAttrs.join(' ')}/>`;
 
     if (isTextBox) {
       textBody = [
         '<wps:txbx><w:txbxContent>',
         serializeShapeTextBody(tb.content),
         '</w:txbxContent></wps:txbx>',
-        `<wps:bodyPr ${bpAttrs.join(' ')}/>`,
+        bodyPr,
       ].join('');
     } else {
-      textBody = [`<wps:bodyPr ${bpAttrs.join(' ')}/>`].join('');
+      textBody = [bodyPr].join('');
     }
   }
 

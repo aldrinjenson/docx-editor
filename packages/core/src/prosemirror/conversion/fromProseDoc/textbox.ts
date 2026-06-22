@@ -42,6 +42,7 @@ export function convertPMTextBoxRun(node: PMNode): Run {
     },
     textBody: {
       content: childParagraphs.length > 0 ? childParagraphs : [{ type: 'paragraph', content: [] }],
+      autoFit: attrs.autoFit,
       margins: {
         top: attrs.marginTop != null ? pixelsToEmu(attrs.marginTop) : undefined,
         bottom: attrs.marginBottom != null ? pixelsToEmu(attrs.marginBottom) : undefined,

@@ -11,11 +11,7 @@
  * the FlowBlock invariant note in CLAUDE.md.
  */
 
-import {
-  DEFAULT_TEXTBOX_MARGINS,
-  DEFAULT_TEXTBOX_WIDTH,
-  assertExhaustiveFlowBlock,
-} from '@eigenpal/docx-editor-core/layout-engine';
+import { assertExhaustiveFlowBlock } from '@eigenpal/docx-editor-core/layout-engine';
 import type {
   FlowBlock,
   ImageBlock,
@@ -31,6 +27,7 @@ import {
   getCachedParagraphMeasure,
   measureBlocksWithFloats,
   measureParagraph,
+  measureTextBoxBlock,
   measureTableBlock,
   setCachedParagraphMeasure,
 } from '@eigenpal/docx-editor-core/layout-bridge';
@@ -84,18 +81,7 @@ export function measureBlock(
     }
 
     case 'textBox': {
-      const tb = block as TextBoxBlock;
-      const margins = tb.margins ?? DEFAULT_TEXTBOX_MARGINS;
-      const innerWidth = (tb.width ?? DEFAULT_TEXTBOX_WIDTH) - margins.left - margins.right;
-      const innerMeasures = tb.content.map((p) => measureParagraph(p, innerWidth));
-      const contentHeight = innerMeasures.reduce((sum, m) => sum + m.totalHeight, 0);
-      const totalHeight = tb.height ?? contentHeight + margins.top + margins.bottom;
-      return {
-        kind: 'textBox' as const,
-        width: tb.width ?? DEFAULT_TEXTBOX_WIDTH,
-        height: totalHeight,
-        innerMeasures,
-      };
+      return measureTextBoxBlock(block as TextBoxBlock);
     }
 
     case 'pageBreak':

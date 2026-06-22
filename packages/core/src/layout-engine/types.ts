@@ -589,8 +589,8 @@ export type TextBoxBlock = {
   cssFloat?: 'left' | 'right' | 'none';
   /** OOXML wrap type for anchored text boxes */
   wrapType?: string;
-  /** OOXML wrapText direction */
   wrapText?: WrapTextDirection;
+  autoFit?: 'none' | 'normal' | 'shape';
   /** Anchor target used during DOCX import/export */
   anchorTarget?: 'followingBlock';
   /** Position for floating/anchored text boxes */

@@ -670,6 +670,7 @@ function convertTextBoxNode(
     cssFloat: attrs.cssFloat as TextBoxBlock['cssFloat'],
     wrapType: attrs.wrapType as string | undefined,
     wrapText: attrs.wrapText as TextBoxBlock['wrapText'],
+    autoFit: attrs.autoFit as TextBoxBlock['autoFit'],
     anchorTarget: attrs.anchorTarget as TextBoxBlock['anchorTarget'],
     position: attrs.position as TextBoxBlock['position'],
     distTop: attrs.distTop as number | undefined,

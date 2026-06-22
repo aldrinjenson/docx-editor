@@ -75,12 +75,25 @@ const DEFAULT_MARGIN_EMU = 91440;
  */
 function parseBodyProperties(bodyPr: XmlElement | null): {
   margins?: TextBox['margins'];
+  autoFit?: TextBox['autoFit'];
 } {
   if (!bodyPr) {
     return {};
   }
 
-  const result: { margins?: TextBox['margins'] } = {};
+  const result: { margins?: TextBox['margins']; autoFit?: TextBox['autoFit'] } = {};
+
+  const noAutofit = findByFullName(bodyPr, 'a:noAutofit');
+  const normAutofit = findByFullName(bodyPr, 'a:normAutofit');
+  const spAutofit = findByFullName(bodyPr, 'a:spAutoFit');
+
+  if (noAutofit) {
+    result.autoFit = 'none';
+  } else if (normAutofit) {
+    result.autoFit = 'normal';
+  } else if (spAutofit) {
+    result.autoFit = 'shape';
+  }
 
   // Margins (insets) in EMUs
   const lIns = parseNumericAttribute(bodyPr, null, 'lIns');
@@ -304,6 +317,7 @@ export function parseTextBox(drawingEl: XmlElement): TextBox | null {
   if (id) textBox.id = id;
   if (fill) textBox.fill = fill;
   if (outline) textBox.outline = outline;
+  if (bodyProps.autoFit) textBox.autoFit = bodyProps.autoFit;
   if (bodyProps.margins) textBox.margins = bodyProps.margins;
   if (relativeHeight !== undefined) textBox.relativeHeight = relativeHeight;
 
@@ -379,6 +393,7 @@ export function parseTextBoxFromShape(
   if (id) textBox.id = id;
   if (fill) textBox.fill = fill;
   if (outline) textBox.outline = outline;
+  if (bodyProps.autoFit) textBox.autoFit = bodyProps.autoFit;
   if (bodyProps.margins) textBox.margins = bodyProps.margins;
   if (position) textBox.position = position;
   if (wrap) textBox.wrap = wrap;

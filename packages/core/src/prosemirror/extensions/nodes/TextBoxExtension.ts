@@ -43,6 +43,8 @@ export interface TextBoxAttrs {
   wrapText?: 'bothSides' | 'left' | 'right' | 'largest';
   /** `wp:anchor relativeHeight` stack-order hint for anchored drawings. */
   relativeHeight?: number;
+  /** DrawingML text box body auto-fit behavior */
+  autoFit?: 'none' | 'normal' | 'shape';
   /** Display anchor relationship for exported text boxes */
   anchorTarget?: 'followingBlock';
   /** Anchor position copied from wp:positionH/wp:positionV */
@@ -83,6 +85,7 @@ export const TextBoxExtension = createNodeExtension({
       wrapType: { default: 'inline' },
       wrapText: { default: null },
       relativeHeight: { default: null },
+      autoFit: { default: null },
       anchorTarget: { default: null },
       position: { default: null },
       distTop: { default: null },
@@ -115,6 +118,7 @@ export const TextBoxExtension = createNodeExtension({
             relativeHeight: el.dataset.relativeHeight
               ? Number(el.dataset.relativeHeight)
               : undefined,
+            autoFit: (el.dataset.autoFit as TextBoxAttrs['autoFit']) || undefined,
             anchorTarget: (el.dataset.anchorTarget as TextBoxAttrs['anchorTarget']) || undefined,
             position: el.dataset.position ? JSON.parse(el.dataset.position) : undefined,
             distTop: el.dataset.distTop ? Number(el.dataset.distTop) : undefined,
@@ -151,6 +155,7 @@ export const TextBoxExtension = createNodeExtension({
       if (attrs.relativeHeight != null) {
         domAttrs['data-relative-height'] = String(attrs.relativeHeight);
       }
+      if (attrs.autoFit) domAttrs['data-auto-fit'] = attrs.autoFit;
       if (attrs.anchorTarget) domAttrs['data-anchor-target'] = attrs.anchorTarget;
       if (attrs.position) domAttrs['data-position'] = JSON.stringify(attrs.position);
       if (attrs.distTop != null) domAttrs['data-dist-top'] = String(attrs.distTop);

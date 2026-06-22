@@ -319,6 +319,8 @@ export interface TextBox {
   outline?: ShapeOutline;
   /** Text content */
   content: Paragraph[];
+  /** Text box auto-fit behavior from DrawingML bodyPr */
+  autoFit?: ShapeTextBody['autoFit'];
   /** Internal margins */
   margins?: {
     top?: number;

@@ -53,6 +53,7 @@ export {
   type MeasureBlockFn,
   type FloatPageGeometry,
 } from './measureBlocksPipeline';
+export { measureTextBoxBlock, type MeasureParagraphFn } from './measureTextBox';
 
 // Caching utilities
 export {

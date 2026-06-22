@@ -96,6 +96,7 @@ function extractTextBoxesFromParagraph(paragraph: Paragraph): {
               fill: shape.fill,
               outline: shape.outline,
               content: shape.textBody.content,
+              autoFit: shape.textBody.autoFit,
               margins: shape.textBody.margins,
             });
             extractedShapes.add(rc);
@@ -211,6 +212,7 @@ function convertTextBox(
       marginLeft,
       marginRight,
       relativeHeight: textBox.relativeHeight,
+      autoFit: textBox.autoFit,
       ...textBoxAnchorAttrsFromDocx(textBox),
     },
     contentNodes

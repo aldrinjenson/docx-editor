@@ -21,7 +21,19 @@ const NS =
   'xmlns:wps="http://schemas.microsoft.com/office/word/2010/wordprocessingShape"';
 
 /** A wps:wsp text box, optionally wrapped in mc:AlternateContent. */
-function textBoxRun(label: string, wrapInAlternateContent: boolean): string {
+function textBoxRun(
+  label: string,
+  wrapInAlternateContent: boolean,
+  autoFit: 'none' | 'normal' | 'shape' | undefined = undefined
+): string {
+  const autoFitXml =
+    autoFit === 'none'
+      ? '<a:noAutofit/>'
+      : autoFit === 'normal'
+        ? '<a:normAutofit/>'
+        : autoFit === 'shape'
+          ? '<a:spAutoFit/>'
+          : '';
   const drawing = `
     <w:drawing>
       <wp:anchor distT="45720" distB="45720" distL="114300" distR="114300"
@@ -48,7 +60,7 @@ function textBoxRun(label: string, wrapInAlternateContent: boolean): string {
                   <w:p><w:r><w:t>${label}</w:t></w:r></w:p>
                 </w:txbxContent>
               </wps:txbx>
-              <wps:bodyPr/>
+              <wps:bodyPr>${autoFitXml}</wps:bodyPr>
             </wps:wsp>
           </a:graphicData>
         </a:graphic>
@@ -63,10 +75,15 @@ function textBoxRun(label: string, wrapInAlternateContent: boolean): string {
   return `<w:r>${inner}</w:r>`;
 }
 
-function headerXml(roots: 'hdr' | 'ftr', label: string, wrapInAC: boolean): string {
+function headerXml(
+  roots: 'hdr' | 'ftr',
+  label: string,
+  wrapInAC: boolean,
+  autoFit?: 'none' | 'normal' | 'shape'
+): string {
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
     <w:${roots} ${NS}>
-      <w:p>${textBoxRun(label, wrapInAC)}</w:p>
+      <w:p>${textBoxRun(label, wrapInAC, autoFit)}</w:p>
     </w:${roots}>`;
 }
 
@@ -124,5 +141,14 @@ describe('header/footer text boxes', () => {
     if (shape?.type !== 'shape') return;
 
     expect(shape.shape.relativeHeight).toBe(251695104);
+  });
+
+  test('header text boxes preserve DrawingML shape auto-fit', () => {
+    const header = parseHeader(headerXml('hdr', 'Fit Label', true, 'shape'));
+    const shape = firstShape(header);
+    expect(shape?.type).toBe('shape');
+    if (shape?.type !== 'shape') return;
+
+    expect(shape.shape.textBody?.autoFit).toBe('shape');
   });
 });
