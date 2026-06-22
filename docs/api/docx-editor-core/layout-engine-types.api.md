@@ -670,6 +670,7 @@ export type TextBoxBlock = {
     cssFloat?: 'left' | 'right' | 'none';
     wrapType?: string;
     wrapText?: WrapTextDirection;
+    autoFit?: 'none' | 'normal' | 'shape';
     anchorTarget?: 'followingBlock';
     position?: ImageRunPosition;
     distTop?: number;

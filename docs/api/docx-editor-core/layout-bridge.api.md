@@ -505,6 +505,9 @@ export function measureBlocksWithFloats(blocks: FlowBlock[], contentWidth: numbe
 // @public
 export function measureParagraph(block: ParagraphBlock, maxWidth: number, options?: MeasureParagraphOptions): ParagraphMeasure;
 
+// @public (undocumented)
+export type MeasureParagraphFn = (block: ParagraphBlock, maxWidth: number) => ParagraphMeasure;
+
 // @public
 export interface MeasureParagraphOptions {
     floatingZones?: FloatingImageZone[];
@@ -525,6 +528,9 @@ export function measureTableCellBlockVisualHeight(block: FlowBlock, blockMeasure
 
 // @public
 export function measureText(text: string, style: FontStyle): TextMeasurement;
+
+// @public
+export function measureTextBoxBlock(textBox: TextBoxBlock, measureParagraphFn?: MeasureParagraphFn): TextBoxMeasure;
 
 // @public
 export function measureTextWidth(text: string, style: FontStyle): number;

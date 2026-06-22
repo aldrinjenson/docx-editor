@@ -1738,6 +1738,7 @@ export interface TableSelectionSnapshot {
 
 // @public
 export interface TextBox {
+    autoFit?: ShapeTextBody['autoFit'];
     content: Paragraph[];
     fill?: ShapeFill;
     id?: string;

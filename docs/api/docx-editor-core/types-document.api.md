@@ -1254,6 +1254,7 @@ export type TabStopAlignment = 'left' | 'center' | 'right' | 'decimal' | 'bar' |
 
 // @public
 export interface TextBox {
+    autoFit?: ShapeTextBody['autoFit'];
     content: Paragraph[];
     fill?: ShapeFill;
     id?: string;
