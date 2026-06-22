@@ -114,7 +114,12 @@ function parseDiagramShape(
     .join('');
   if (!text.trim()) return null;
 
-  const xfrm = findDescendantsByLocalName(shapeEl, 'xfrm')[0] ?? null;
+  // Cached SmartArt shapes often carry two transforms: `spPr/a:xfrm` for the
+  // geometry surface (e.g. a chevron) and `dsp:txXfrm` for the text rectangle
+  // inside that shape. Use the text transform when present so projected labels
+  // line up with Word instead of using the wider decorative shape bounds.
+  const textXfrm = findDirectChildByLocalName(shapeEl, 'txXfrm');
+  const xfrm = textXfrm ?? findDescendantsByLocalName(shapeEl, 'xfrm')[0] ?? null;
   const off = xfrm ? findDescendantsByLocalName(xfrm, 'off')[0] : null;
   const ext = xfrm ? findDescendantsByLocalName(xfrm, 'ext')[0] : null;
 
@@ -131,6 +136,7 @@ function parseDiagramShape(
   const shapeType = getAttribute(prstGeom, null, 'prst') ?? 'rect';
   const formatting = parseDiagramTextFormatting(shapeEl);
 
+  const bodyPr = findDescendantsByLocalName(shapeEl, 'bodyPr')[0] ?? null;
   const paragraph: Paragraph = {
     type: 'paragraph',
     formatting: { alignment: 'center' },
@@ -150,7 +156,7 @@ function parseDiagramShape(
     size,
     wrap: baseWrap,
     textBody: {
-      margins: { top: 0, right: 0, bottom: 0, left: 0 },
+      margins: parseDiagramTextMargins(bodyPr),
       content: [paragraph],
     },
   };
@@ -186,6 +192,17 @@ function parseDiagramTextFormatting(shapeEl: XmlElement): TextFormatting {
   if (color) formatting.color = color;
 
   return formatting;
+}
+
+function parseDiagramTextMargins(
+  bodyPr: XmlElement | null
+): NonNullable<Shape['textBody']>['margins'] {
+  return {
+    top: parseNumericAttribute(bodyPr, null, 'tIns') ?? 0,
+    right: parseNumericAttribute(bodyPr, null, 'rIns') ?? 0,
+    bottom: parseNumericAttribute(bodyPr, null, 'bIns') ?? 0,
+    left: parseNumericAttribute(bodyPr, null, 'lIns') ?? 0,
+  };
 }
 
 function parseFirstSolidColor(root: XmlElement | null): ColorValue | undefined {
@@ -250,6 +267,10 @@ function offsetPosition(
       posOffset: (base.vertical.posOffset ?? 0) + offset.y,
     },
   };
+}
+
+function findDirectChildByLocalName(root: XmlElement, localName: string): XmlElement | null {
+  return getChildElements(root).find((child) => getLocalName(child.name) === localName) ?? null;
 }
 
 function findDescendantsByLocalName(root: XmlElement, localName: string): XmlElement[] {

@@ -39,10 +39,27 @@ function buildPageRenderArgs(
     resolvedCommentIds: options.resolvedCommentIds,
   };
   const pageOptions: RenderPageOptions = { ...options };
+  const sectionHf =
+    page.sectionIndex !== undefined
+      ? options.sectionHeaderFooterContent?.[page.sectionIndex]
+      : undefined;
+  if (sectionHf) {
+    pageOptions.headerContent = sectionHf.headerContent;
+    pageOptions.footerContent = sectionHf.footerContent;
+    pageOptions.firstPageHeaderContent = sectionHf.firstPageHeaderContent;
+    pageOptions.firstPageFooterContent = sectionHf.firstPageFooterContent;
+    pageOptions.titlePg = sectionHf.titlePg;
+    pageOptions.headerDistance = sectionHf.headerDistance;
+    pageOptions.footerDistance = sectionHf.footerDistance;
+  }
   // Per-page header/footer selection when titlePg is enabled
-  if (options.titlePg && page.number === 1) {
+  if (pageOptions.titlePg && (page.sectionPageNumber ?? page.number) === 1) {
     pageOptions.headerContent = options.firstPageHeaderContent;
     pageOptions.footerContent = options.firstPageFooterContent;
+    if (sectionHf) {
+      pageOptions.headerContent = sectionHf.firstPageHeaderContent;
+      pageOptions.footerContent = sectionHf.firstPageFooterContent;
+    }
   }
   if (options.footnotesByPage) {
     const fns = options.footnotesByPage.get(page.number);
@@ -85,6 +102,8 @@ function computePageFingerprint(page: Page): string {
     `m:${page.margins.top},${page.margins.right},${page.margins.bottom},${page.margins.left}`
   );
   parts.push(`n:${page.number}`);
+  if (page.sectionIndex !== undefined) parts.push(`si:${page.sectionIndex}`);
+  if (page.sectionPageNumber !== undefined) parts.push(`spn:${page.sectionPageNumber}`);
   if (page.footnoteReservedHeight) parts.push(`fn:${page.footnoteReservedHeight}`);
 
   // Each fragment's stable properties
@@ -138,6 +157,34 @@ function computeOptionsHash(options: RenderPageOptions): string {
     );
   }
   if (options.titlePg) parts.push('titlePg');
+  if (options.sectionHeaderFooterContent) {
+    for (const [sectionIndex, hf] of Object.entries(options.sectionHeaderFooterContent)) {
+      parts.push(`sec:${sectionIndex}`);
+      if (hf.headerContent) {
+        parts.push(
+          `sec-hdr:${hf.headerContent.blocks.length},${hf.headerContent.height},${
+            hf.headerContent.visualTop ?? 0
+          },${hf.headerContent.visualBottom ?? hf.headerContent.height}`
+        );
+      }
+      if (hf.footerContent) {
+        parts.push(
+          `sec-ftr:${hf.footerContent.blocks.length},${hf.footerContent.height},${
+            hf.footerContent.visualTop ?? 0
+          },${hf.footerContent.visualBottom ?? hf.footerContent.height}`
+        );
+      }
+      if (hf.firstPageHeaderContent) {
+        parts.push(`sec-fp-hdr:${hf.firstPageHeaderContent.blocks.length}`);
+      }
+      if (hf.firstPageFooterContent) {
+        parts.push(`sec-fp-ftr:${hf.firstPageFooterContent.blocks.length}`);
+      }
+      if (hf.titlePg) parts.push('sec-titlePg');
+      if (hf.headerDistance !== undefined) parts.push(`sec-hd:${hf.headerDistance}`);
+      if (hf.footerDistance !== undefined) parts.push(`sec-fd:${hf.footerDistance}`);
+    }
+  }
 
   // Theme changes
   if (options.theme) {

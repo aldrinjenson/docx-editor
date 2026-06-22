@@ -39,6 +39,9 @@ import {
   stabilizeFootnoteLayout,
   FOOTNOTE_COLUMN_GAP_PX,
   extendMarginsForHeaderFooter,
+  getMargins,
+  getPageSize,
+  resolveHeaderFooter,
   twipsToPixels,
   type FloatPageGeometry,
 } from '../layout-bridge';
@@ -46,6 +49,7 @@ import {
   pageGeometryFromPage,
   type FootnoteRenderItem,
   type HeaderFooterContent,
+  type SectionHeaderFooterRenderContent,
 } from '../layout-painter';
 import type {
   Document,
@@ -101,6 +105,7 @@ export interface LayoutComputation {
   footerContentForRender: HeaderFooterContent | undefined;
   firstPageHeaderForRender: HeaderFooterContent | undefined;
   firstPageFooterForRender: HeaderFooterContent | undefined;
+  sectionHeaderFooterContentForRender: Record<number, SectionHeaderFooterRenderContent> | undefined;
   hasTitlePg: boolean;
   watermark: Watermark | undefined;
   headerDistancePx: number | undefined;
@@ -237,6 +242,14 @@ export function computeLayout(inputs: ComputeLayoutInputs): LayoutComputation {
   const firstPageFooterForRender = hasTitlePg
     ? convertHf(firstPageFooterContent, hfMetricsFooter)
     : undefined;
+  const sectionHeaderFooterContentForRender = buildSectionHeaderFooterContent({
+    document,
+    styles,
+    theme,
+    measureBlocks,
+    defaultTabStopTwips,
+    getHfPmDoc,
+  });
 
   // Watermark rides PM state as a doc attr (so it's undoable).
   const watermark = (state.doc.attrs?.watermark as Watermark | null) ?? undefined;
@@ -323,6 +336,7 @@ export function computeLayout(inputs: ComputeLayoutInputs): LayoutComputation {
     footerContentForRender,
     firstPageHeaderForRender,
     firstPageFooterForRender,
+    sectionHeaderFooterContentForRender,
     hasTitlePg,
     watermark,
     // Nullish, not truthy: an explicit `w:header="0"` must paint the header at
@@ -338,4 +352,59 @@ export function computeLayout(inputs: ComputeLayoutInputs): LayoutComputation {
     pageBorders: sectionProperties?.pageBorders,
     footnotesByPage: footnotesByPage?.size ? footnotesByPage : undefined,
   };
+}
+
+function buildSectionHeaderFooterContent({
+  document,
+  styles,
+  theme,
+  measureBlocks,
+  defaultTabStopTwips,
+  getHfPmDoc,
+}: {
+  document: Document | null;
+  styles: StyleDefinitions | null | undefined;
+  theme: Theme | null | undefined;
+  measureBlocks: MeasureBlocksFn;
+  defaultTabStopTwips: number | null;
+  getHfPmDoc: (hf: HeaderFooter) => PMNode | null | undefined;
+}): Record<number, SectionHeaderFooterRenderContent> | undefined {
+  const sections = document?.package?.document?.sections;
+  if (!document || !sections || sections.length <= 1) return undefined;
+
+  const result: Record<number, SectionHeaderFooterRenderContent> = {};
+  for (let index = 0; index < sections.length; index++) {
+    const sp = sections[index]?.properties;
+    const pageSize = getPageSize(sp);
+    const margins = getMargins(sp);
+    const contentWidth = pageSize.w - margins.left - margins.right;
+    const hfOptions = { styles, theme, measureBlocks, defaultTabStopTwips };
+    const headerMetrics = { section: 'header' as const, pageSize, margins };
+    const footerMetrics = { section: 'footer' as const, pageSize, margins };
+    const { header, footer, firstHeader, firstFooter } = resolveHeaderFooter(document, sp);
+
+    const convert = (
+      hf: HeaderFooter | null | undefined,
+      metrics: typeof headerMetrics | typeof footerMetrics
+    ): HeaderFooterContent | undefined => {
+      if (!hf) return undefined;
+      const pmDoc = getHfPmDoc(hf);
+      if (pmDoc) {
+        return convertHeaderFooterPmDocToContent(pmDoc, contentWidth, metrics, hfOptions);
+      }
+      return convertHeaderFooterToContent(hf, contentWidth, metrics, hfOptions);
+    };
+
+    result[index] = {
+      headerContent: convert(header, headerMetrics),
+      footerContent: convert(footer, footerMetrics),
+      firstPageHeaderContent: convert(firstHeader, headerMetrics),
+      firstPageFooterContent: convert(firstFooter, footerMetrics),
+      titlePg: sp?.titlePg === true,
+      headerDistance: sp?.headerDistance != null ? twipsToPixels(sp.headerDistance) : undefined,
+      footerDistance: sp?.footerDistance != null ? twipsToPixels(sp.footerDistance) : undefined,
+    };
+  }
+
+  return result;
 }

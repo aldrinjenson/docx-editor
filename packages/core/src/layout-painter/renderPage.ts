@@ -72,6 +72,7 @@ import {
   renderHeaderFooterContent,
   type HeaderFooterContent,
   type HeaderFooterLayoutInfo,
+  type SectionHeaderFooterRenderContent,
 } from './renderPage/headerFooter';
 import {
   renderFootnoteArea,
@@ -203,6 +204,8 @@ export interface RenderPageOptions {
   firstPageFooterContent?: HeaderFooterContent;
   /** Whether different first page headers/footers are enabled (w:titlePg). */
   titlePg?: boolean;
+  /** Section-specific header/footer render content keyed by Page.sectionIndex. */
+  sectionHeaderFooterContent?: Record<number, SectionHeaderFooterRenderContent>;
   /** Distance from page top to header content. */
   headerDistance?: number;
   /** Distance from page bottom to footer content. */
@@ -952,8 +955,9 @@ export function renderPage(
 
     let shouldClipFooter = !footerOverflows;
     if (options.footerContent && options.footerContent.blocks.length > 0) {
+      const footerFlowTop = page.size.h - footerDistance - interactiveFooterHeight;
       const layout: HeaderFooterLayoutInfo = {
-        flowTop: page.size.h - footerDistance - (options.footerContent?.height ?? 0),
+        flowTop: footerFlowTop,
         flowLeft: page.margins.left,
         contentWidth: footerContentWidth,
         pageWidth: page.size.w,
@@ -966,11 +970,12 @@ export function renderPage(
         options,
         layout
       );
-      // The box shrank from `actualFooterHeight` to `interactiveFooterHeight`
-      // with its bottom pinned, so its top moved down by the difference. Offset
-      // the content up by the same amount to keep it painted in place (a normal
-      // footer with no float has a zero delta, so this is a no-op there).
-      footerContentEl.style.top = `${-footerVisualTop - (actualFooterHeight - interactiveFooterHeight)}px`;
+      // Keep the footer content relative to the interactive footer band. The
+      // visual height may include tall anchored text boxes/images, but
+      // paragraph-relative footer anchors still originate at the footer
+      // paragraph near the page bottom; shifting by the full visual delta pulls
+      // them into body content.
+      footerContentEl.style.top = `${-footerVisualTop}px`;
       if (footerContentEl.querySelector('img')) {
         shouldClipFooter = false;
       }

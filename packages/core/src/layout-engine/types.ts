@@ -936,6 +936,7 @@ export type Page = {
   orientation?: 'portrait' | 'landscape';
   /** Section index this page belongs to. */
   sectionIndex?: number;
+  sectionPageNumber?: number; // 1-based page number within the section, when known.
   /** Header/footer references for this page. */
   headerFooterRefs?: {
     headerDefault?: string;

@@ -50,17 +50,18 @@ const diagramXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
           <a:prstGeom prst="chevron"><a:avLst/></a:prstGeom>
         </dsp:spPr>
         <dsp:txBody>
-          <a:bodyPr/>
+          <a:bodyPr lIns="1000" tIns="2000" rIns="3000" bIns="4000"/>
           <a:p>
             <a:r>
               <a:rPr sz="650">
-                <a:solidFill><a:schemeClr val="bg1"/></a:solidFill>
+                <a:solidFill><a:srgbClr val="32D700"/></a:solidFill>
                 <a:latin typeface="Arial"/>
               </a:rPr>
               <a:t>Section Label</a:t>
             </a:r>
           </a:p>
         </dsp:txBody>
+        <dsp:txXfrm><a:off x="13000" y="14000"/><a:ext cx="70000" cy="120000"/></dsp:txXfrm>
       </dsp:sp>
     </dsp:spTree>
   </dsp:drawing>`;
@@ -112,10 +113,16 @@ describe('diagram drawing fallback', () => {
     if (!shapeContent || shapeContent.type !== 'shape') throw new Error('expected shape');
 
     expect(shapeContent.shape.shapeType).toBe('chevron');
-    expect(shapeContent.shape.size).toEqual({ width: 100000, height: 200000 });
-    expect(shapeContent.shape.position?.horizontal.posOffset).toBe(4000);
-    expect(shapeContent.shape.position?.vertical.posOffset).toBe(6000);
+    expect(shapeContent.shape.size).toEqual({ width: 70000, height: 120000 });
+    expect(shapeContent.shape.position?.horizontal.posOffset).toBe(14000);
+    expect(shapeContent.shape.position?.vertical.posOffset).toBe(16000);
     expect(shapeContent.shape.wrap?.type).toBe('inFront');
+    expect(shapeContent.shape.textBody?.margins).toEqual({
+      top: 2000,
+      right: 3000,
+      bottom: 4000,
+      left: 1000,
+    });
 
     const innerPara = shapeContent.shape.textBody?.content[0];
     if (!innerPara || innerPara.type !== 'paragraph') throw new Error('expected inner paragraph');
@@ -123,7 +130,7 @@ describe('diagram drawing fallback', () => {
     if (innerRun.type !== 'run') throw new Error('expected run');
     expect(innerRun.formatting?.fontSize).toBe(13);
     expect(innerRun.formatting?.fontFamily?.ascii).toBe('Arial');
-    expect(innerRun.formatting?.color?.themeColor).toBe('background1');
+    expect(innerRun.formatting?.color?.rgb).toBe('32D700');
     expect(innerRun.content[0]).toEqual({ type: 'text', text: 'Section Label' });
   });
 });

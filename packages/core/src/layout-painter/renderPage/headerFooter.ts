@@ -55,6 +55,16 @@ export interface HeaderFooterContent {
   visualBottom?: number;
 }
 
+export interface SectionHeaderFooterRenderContent {
+  headerContent?: HeaderFooterContent;
+  footerContent?: HeaderFooterContent;
+  firstPageHeaderContent?: HeaderFooterContent;
+  firstPageFooterContent?: HeaderFooterContent;
+  titlePg?: boolean;
+  headerDistance?: number;
+  footerDistance?: number;
+}
+
 export interface HeaderFooterLayoutInfo {
   flowTop: number;
   flowLeft: number;

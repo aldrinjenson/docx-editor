@@ -1,7 +1,13 @@
 import { GlobalRegistrator } from '@happy-dom/global-registrator';
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { PAGE_CLASS_NAMES, renderPage, type HeaderFooterContent } from '../renderPage';
-import type { Page, ParagraphBlock, ParagraphMeasure } from '../../layout-engine/types';
+import type {
+  Page,
+  ParagraphBlock,
+  ParagraphMeasure,
+  TextBoxBlock,
+  TextBoxMeasure,
+} from '../../layout-engine/types';
 
 beforeAll(() => GlobalRegistrator.register());
 afterAll(() => GlobalRegistrator.unregister());
@@ -121,5 +127,65 @@ describe('renderPage header/footer paragraph spacing', () => {
     const paragraphEl = headerEl?.querySelector('.layout-paragraph') as HTMLElement | null;
     expect(paragraphEl).toBeTruthy();
     expect(paragraphEl?.style.top).toBe('8px');
+  });
+
+  test('footer paragraph-relative floats stay anchored to the footer band', () => {
+    const page = makePage();
+    const floatingBox: TextBoxBlock = {
+      kind: 'textBox',
+      id: 'footer-float',
+      width: 160,
+      height: 120,
+      content: [],
+      displayMode: 'float',
+      position: {
+        vertical: { relativeTo: 'paragraph', posOffset: 0 },
+      },
+    };
+    const paragraph: ParagraphBlock = {
+      kind: 'paragraph',
+      id: 'footer-flow',
+      runs: [],
+    };
+    const floatingMeasure: TextBoxMeasure = {
+      kind: 'textBox',
+      width: 160,
+      height: 120,
+      innerMeasures: [],
+    };
+    const paragraphMeasure: ParagraphMeasure = {
+      kind: 'paragraph',
+      lines: [],
+      totalHeight: 24,
+    };
+    const footerContent: HeaderFooterContent = {
+      blocks: [floatingBox, paragraph],
+      measures: [floatingMeasure, paragraphMeasure],
+      height: 144,
+      flowHeight: 24,
+      visualTop: 0,
+      visualBottom: 144,
+    };
+
+    const el = renderPage(
+      page,
+      {
+        pageNumber: 1,
+        totalPages: 1,
+        section: 'body',
+      },
+      {
+        document,
+        footerContent,
+      }
+    );
+
+    const footerEl = el.querySelector<HTMLElement>(`.${PAGE_CLASS_NAMES.footer}`);
+    const footerContentEl = footerEl?.firstElementChild as HTMLElement | null;
+    const textBoxEl = footerEl?.querySelector<HTMLElement>('.layout-textbox');
+
+    expect(footerEl?.style.top).toBe('984px');
+    expect(footerContentEl?.style.top).toBe('0px');
+    expect(textBoxEl?.style.top).toBe('0px');
   });
 });

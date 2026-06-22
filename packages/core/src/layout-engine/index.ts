@@ -189,12 +189,23 @@ export function layoutDocument(
 
   const initialConfig = sectionConfigs[0] ?? bodyConfig;
 
+  let sectionIdx = 0;
+  let activeSectionIdxForNewPages = 0;
+  const sectionPageCounts = new Map<number, number>();
+
   // Create paginator with first section geometry
   const paginator = createPaginator({
     pageSize: initialConfig.pageSize,
     margins: initialConfig.margins,
     columns: initialConfig.columns ?? DEFAULT_COLUMNS,
     footnoteReservedHeights: options.footnoteReservedHeights,
+    onNewPage: (state) => {
+      const idx = activeSectionIdxForNewPages;
+      const pageNumber = (sectionPageCounts.get(idx) ?? 0) + 1;
+      sectionPageCounts.set(idx, pageNumber);
+      state.page.sectionIndex = idx;
+      state.page.sectionPageNumber = pageNumber;
+    },
   });
 
   // Apply contextual spacing: suppress spaceBefore/spaceAfter between
@@ -207,7 +218,6 @@ export function layoutDocument(
   const midChainIndices = getMidChainIndices(keepNextChains);
 
   // Process each block, tracking section break index with a counter (O(1) per break)
-  let sectionIdx = 0;
   const consumedPageBreakBefore = new Set<number>();
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i];
@@ -293,6 +303,8 @@ export function layoutDocument(
           nextType === 'continuous' && continuousBreakPrecedesAnchoredTitle(blocks, i)
             ? 'nextPage'
             : nextType;
+        const nextSectionIdx = sectionIdx + 1;
+        activeSectionIdxForNewPages = nextSectionIdx;
         handleSectionBreak(block as SectionBreakBlock, paginator, nextSectionConfig, promotedType);
 
         const nextBreakIndex = breakIndices[sectionIdx + 1];
@@ -311,7 +323,7 @@ export function layoutDocument(
           });
         }
 
-        sectionIdx++;
+        sectionIdx = nextSectionIdx;
         break;
       }
 
