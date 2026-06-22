@@ -91,6 +91,16 @@ function shapeTexts(hf: HeaderFooter): string[] {
     });
 }
 
+function firstShape(hf: HeaderFooter) {
+  return hf.content
+    .filter((b): b is Paragraph => b.type === 'paragraph')
+    .flatMap((p) =>
+      p.content.flatMap((c) =>
+        c.type === 'run' ? c.content.filter((rc) => rc.type === 'shape') : []
+      )
+    )[0];
+}
+
 describe('header/footer text boxes', () => {
   test('header: AlternateContent-wrapped wps:wsp text box is parsed', () => {
     const header = parseHeader(headerXml('hdr', 'Header Box', true));
@@ -105,5 +115,14 @@ describe('header/footer text boxes', () => {
   test('footer: AlternateContent-wrapped wps:wsp text box is parsed', () => {
     const footer = parseFooter(headerXml('ftr', 'Footer Box', true));
     expect(shapeTexts(footer)).toEqual(['Footer Box']);
+  });
+
+  test('header text boxes preserve authored z-order for overlay rendering', () => {
+    const header = parseHeader(headerXml('hdr', 'Overlay Label', true));
+    const shape = firstShape(header);
+    expect(shape?.type).toBe('shape');
+    if (shape?.type !== 'shape') return;
+
+    expect(shape.shape.relativeHeight).toBe(251695104);
   });
 });
