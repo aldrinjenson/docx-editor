@@ -88,6 +88,20 @@ function render(displayMode: 'float' | 'inline' | 'block'): number {
   return Math.round(parseFloat(para.style.top));
 }
 
+function renderTextBoxTop(block: TextBoxBlock): number {
+  const content: HeaderFooterContent = {
+    blocks: [block],
+    measures: [textBoxMeasure],
+    height: TB_HEIGHT,
+    flowHeight: 0,
+    visualTop: 0,
+    visualBottom: TB_HEIGHT,
+  };
+  const el = renderHeaderFooterContent(content, ctx, { document }, layout);
+  const textBox = el.querySelector<HTMLElement>('.layout-textbox')!;
+  return Math.round(parseFloat(textBox.style.top));
+}
+
 describe('HF floating text box does not advance the flow cursor (#729)', () => {
   test('float box: following paragraph stays at the top (not pushed below the box)', () => {
     expect(render('float')).toBe(0);
@@ -99,5 +113,19 @@ describe('HF floating text box does not advance the flow cursor (#729)', () => {
 
   test('topAndBottom (block) box still stacks: following paragraph below the box', () => {
     expect(render('block')).toBe(TB_HEIGHT);
+  });
+
+  test('float box honors authored vertical anchor', () => {
+    expect(
+      renderTextBoxTop({
+        ...textBoxBlock('float'),
+        position: {
+          vertical: {
+            relativeTo: 'page',
+            posOffset: 914400, // 96px from page top, minus 48px HF flow origin.
+          },
+        },
+      })
+    ).toBe(48);
   });
 });

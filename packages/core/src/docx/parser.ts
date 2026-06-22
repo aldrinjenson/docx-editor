@@ -410,6 +410,31 @@ function buildMediaMap(raw: RawDocxContent, _rels: RelationshipMap): Map<string,
     }
   }
 
+  // Make diagram drawing XML addressable through the same relationship target
+  // map as media. SmartArt/diagram parts are XML, but run-level drawing
+  // parsers only receive relationships + media; exposing the XML here lets
+  // them build a conservative visual fallback without threading RawDocxContent
+  // through every parser layer.
+  for (const [path, xml] of raw.allXml.entries()) {
+    const lowerPath = path.toLowerCase();
+    if (!lowerPath.startsWith('word/diagrams/') || !lowerPath.endsWith('.xml')) continue;
+
+    const data = new TextEncoder().encode(xml).buffer;
+    const mediaFile: MediaFile = {
+      path,
+      filename: path.split('/').pop() || path,
+      mimeType: 'application/xml',
+      data,
+      text: xml,
+    };
+
+    media.set(path, mediaFile);
+    const normalizedPath = path.replace(/^word\//, '');
+    if (normalizedPath !== path) {
+      media.set(normalizedPath, mediaFile);
+    }
+  }
+
   return media;
 }
 

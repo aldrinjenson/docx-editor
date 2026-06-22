@@ -371,6 +371,55 @@ describe('toProseDoc — trailing paragraph after isolating content (#861)', () 
     expect(pmDoc.lastChild?.childCount).toBe(0);
   });
 
+  test('converts anchored decorative rectangles into positioned text boxes', () => {
+    const doc: Document = {
+      package: {
+        document: {
+          content: [
+            {
+              type: 'paragraph',
+              content: [
+                {
+                  type: 'run',
+                  content: [
+                    {
+                      type: 'shape',
+                      shape: {
+                        type: 'shape',
+                        shapeType: 'rect',
+                        size: { width: 1828800, height: 228600 },
+                        position: {
+                          horizontal: { relativeTo: 'page', posOffset: 914400 },
+                          vertical: { relativeTo: 'paragraph', posOffset: 457200 },
+                        },
+                        wrap: { type: 'behind' },
+                        fill: { type: 'solid', color: { themeColor: 'accent3' } },
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+        theme: OFFICE_THEME,
+      },
+    };
+
+    const pmDoc = toProseDoc(doc);
+    expect(topLevelTypes(pmDoc)).toEqual(['textBox', 'paragraph']);
+    const textBox = pmDoc.firstChild;
+    expect(textBox?.type.name).toBe('textBox');
+    expect(textBox?.attrs.width).toBe(192);
+    expect(textBox?.attrs.height).toBe(24);
+    expect(textBox?.attrs.fillColor).toBe('#A5A5A5');
+    expect(textBox?.attrs.marginTop).toBe(0);
+    expect(textBox?.attrs.marginRight).toBe(0);
+    expect(textBox?.attrs.displayMode).toBe('float');
+    expect(textBox?.attrs.wrapType).toBe('behind');
+    expect(textBox?.attrs.position?.vertical.posOffset).toBe(457200);
+  });
+
   test('does not append when the document already ends with a paragraph', () => {
     const doc: Document = {
       package: {

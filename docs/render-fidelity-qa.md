@@ -16,6 +16,7 @@ Use this checklist when a DOCX renders differently from Word or another known-go
 - Page count and scroll-to-page behavior should match the expected pagination window. Virtualized pages can be empty until scrolled into view, so sample pages through the e2e hook instead of reading only the initial DOM.
 - Broken image icons usually mean the parser created an image with no resolved relationship, or the painter assigned a browser-unsupported source. Preserve the document model for round-trip, but avoid painting undecodable browser formats as visible broken icons.
 - Text boxes should pass relationships and media into their nested paragraph parser. Missing media in nested content often shows up as empty picture boxes.
+- Header and footer navigation bands may be composed from `mc:AlternateContent`, WPS shapes, theme-colored rectangles, and cached diagram drawing parts. Verify repeated labels, visual strip backgrounds, anchored vertical offsets, footer text, and page fields together.
 - Multi-column continuous sections need fragment-local x/y coordinates. Paragraphs, tables, and floating content should be placed relative to the fragment column rather than the physical page origin.
 
 ## Validation Commands

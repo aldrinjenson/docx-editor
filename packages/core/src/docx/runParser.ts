@@ -40,6 +40,7 @@ import type {
   UnderlineStyle,
   Theme,
   Image,
+  ShapeContent,
   RelationshipMap,
   MediaFile,
 } from '../types/document';
@@ -56,6 +57,9 @@ import {
 } from './xmlParser';
 import { resolveThemeFontRef } from './themeParser';
 import { parseImage } from './imageParser';
+import { parseShapeFromDrawing } from './shapeParser';
+import { isTextBoxDrawing } from './textBoxParser';
+import { parseDiagramDrawingContent } from './diagramParser';
 import { parseVmlImageContent } from './vmlImageParser';
 
 /**
@@ -543,22 +547,27 @@ function parseInstrText(element: XmlElement): InstrTextContent {
  * Uses imageParser to fully parse the drawing element including
  * image data resolution from relationships and media files.
  */
-function parseDrawingContent(
+function parseDrawingContents(
   element: XmlElement,
   rels: RelationshipMap | null,
   media: Map<string, MediaFile> | null
-): DrawingContent | null {
+): Array<DrawingContent | ShapeContent> {
   // Use the full imageParser to parse the drawing
   const image = parseImage(element, rels ?? undefined, media ?? undefined);
 
-  if (!image) {
-    return null;
+  if (image) {
+    return [{ type: 'drawing', image }];
   }
 
-  return {
-    type: 'drawing',
-    image,
-  };
+  const diagramShapes = parseDiagramDrawingContent(element, rels, media);
+  if (diagramShapes.length > 0) return diagramShapes;
+
+  // Text boxes need their own enrichment pass so nested paragraphs, lists, and
+  // media are parsed with document context. Do not emit a placeholder here.
+  if (isTextBoxDrawing(element)) return [];
+
+  const shape = parseShapeFromDrawing(element);
+  return shape ? [{ type: 'shape', shape }] : [];
 }
 
 /**
@@ -637,10 +646,7 @@ function parseRunContents(
 
       case 'drawing':
         // Drawing/image
-        const drawing = parseDrawingContent(child, rels, media);
-        if (drawing) {
-          contents.push(drawing);
-        }
+        contents.push(...parseDrawingContents(child, rels, media));
         break;
 
       case 'pict':
@@ -678,9 +684,7 @@ function parseRunContents(
           for (const innerChild of getChildElements(targetEl)) {
             const innerName = getLocalName(innerChild.name);
             if (innerName === 'drawing') {
-              const innerDrawing = parseDrawingContent(innerChild, rels, media);
-              // Only include drawings that have actual image data (skip shapes/connectors)
-              if (innerDrawing?.image?.src) contents.push(innerDrawing);
+              contents.push(...parseDrawingContents(innerChild, rels, media));
             }
           }
         }

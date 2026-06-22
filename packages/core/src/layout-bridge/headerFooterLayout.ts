@@ -164,8 +164,10 @@ function getPositionAlignment(axis: PositionedAxis | undefined): string | undefi
   return axis?.align ?? axis?.alignment;
 }
 
+type HeaderFooterPositionedVisual = Pick<ImageRun, 'height' | 'position'>;
+
 export function resolveHeaderFooterVisualTop(
-  run: ImageRun,
+  run: HeaderFooterPositionedVisual,
   paragraphY: number,
   flowHeight: number,
   metrics: HeaderFooterMetrics
@@ -293,8 +295,16 @@ export function calculateHeaderFooterVisualBounds(
       visualBottom = Math.max(visualBottom, blockBottomY);
       cursorY = blockBottomY;
     } else if (block.kind === 'textBox' && measure.kind === 'textBox') {
-      const blockBottomY = cursorY + measure.height;
-      visualTop = Math.min(visualTop, cursorY);
+      const blockTopY = block.position?.vertical
+        ? resolveHeaderFooterVisualTop(
+            { height: measure.height, position: block.position },
+            cursorY,
+            flowHeight,
+            metrics
+          )
+        : cursorY;
+      const blockBottomY = blockTopY + measure.height;
+      visualTop = Math.min(visualTop, blockTopY);
       visualBottom = Math.max(visualBottom, blockBottomY);
       // A floating text box is positioned, not in-flow: it extends the visual
       // bounds (so the band/container stays tall enough to show it) but does
@@ -302,7 +312,7 @@ export function calculateHeaderFooterVisualBounds(
       // and floating tables. Otherwise the header container outgrows its actual
       // content and the hover highlight reads taller than the header (#705/#729).
       if (block.displayMode !== 'float') {
-        cursorY = blockBottomY;
+        cursorY += measure.height;
       }
     }
   }

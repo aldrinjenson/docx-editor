@@ -213,6 +213,49 @@ function buildDocumentWithTextBoxPicture(): string {
     </w:document>`;
 }
 
+function buildDocumentWithAlternateContentVisualShape(): string {
+  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    <w:document ${NS}>
+      <w:body>
+        <w:p>
+          <w:r>
+            <mc:AlternateContent>
+              <mc:Choice Requires="wps">
+                <w:drawing>
+                  <wp:anchor distT="0" distB="0" distL="0" distR="0"
+                    simplePos="0" relativeHeight="251664384" behindDoc="1"
+                    locked="0" layoutInCell="1" allowOverlap="1">
+                    <wp:simplePos x="0" y="0"/>
+                    <wp:positionH relativeFrom="page"><wp:posOffset>914400</wp:posOffset></wp:positionH>
+                    <wp:positionV relativeFrom="paragraph"><wp:posOffset>457200</wp:posOffset></wp:positionV>
+                    <wp:extent cx="1828800" cy="228600"/>
+                    <wp:wrapNone/>
+                    <wp:docPr id="8" name="Navigation Background"/>
+                    <a:graphic>
+                      <a:graphicData uri="http://schemas.microsoft.com/office/word/2010/wordprocessingShape">
+                        <wps:wsp>
+                          <wps:cNvSpPr/>
+                          <wps:spPr>
+                            <a:xfrm><a:off x="0" y="0"/><a:ext cx="1828800" cy="228600"/></a:xfrm>
+                            <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+                            <a:solidFill><a:srgbClr val="808080"/></a:solidFill>
+                            <a:ln><a:noFill/></a:ln>
+                          </wps:spPr>
+                          <wps:bodyPr/>
+                        </wps:wsp>
+                      </a:graphicData>
+                    </a:graphic>
+                  </wp:anchor>
+                </w:drawing>
+              </mc:Choice>
+              <mc:Fallback><w:pict/></mc:Fallback>
+            </mc:AlternateContent>
+          </w:r>
+        </w:p>
+      </w:body>
+    </w:document>`;
+}
+
 const pictureRels: RelationshipMap = new Map<string, Relationship>([
   [
     'rIdPicture',
@@ -314,5 +357,27 @@ describe('enrichParagraphTextBoxes — mc:AlternateContent traversal', () => {
 
     expect(innerDrawing.image.rId).toBe('rIdPicture');
     expect(innerDrawing.image.src).toBe(TINY_PNG_DATA_URL);
+  });
+
+  test('preserves visual-only wps shapes wrapped in mc:Choice', () => {
+    const body = parseDocumentBody(buildDocumentWithAlternateContentVisualShape());
+    const paragraph = body.content[0];
+    if (paragraph.type !== 'paragraph') throw new Error('expected paragraph');
+
+    const shapes = paragraph.content.flatMap((c) =>
+      c.type === 'run' ? c.content.filter((rc) => rc.type === 'shape') : []
+    );
+
+    expect(shapes).toHaveLength(1);
+    const shapeContent = shapes[0];
+    if (shapeContent.type !== 'shape') throw new Error('expected shape');
+
+    expect(shapeContent.shape.name).toBe('Navigation Background');
+    expect(shapeContent.shape.shapeType).toBe('rect');
+    expect(shapeContent.shape.fill?.type).toBe('solid');
+    expect(shapeContent.shape.fill?.color?.rgb).toBe('808080');
+    expect(shapeContent.shape.textBody).toBeUndefined();
+    expect(shapeContent.shape.position?.vertical.posOffset).toBe(457200);
+    expect(shapeContent.shape.wrap?.type).toBe('behind');
   });
 });

@@ -308,6 +308,8 @@ export interface MediaFile {
   mimeType: string;
   /** Binary data */
   data: ArrayBuffer;
+  /** Text content for XML-backed package parts made available to parsers. */
+  text?: string;
   /** Base64 encoded data for rendering */
   base64?: string;
   /** Data URL for direct use in src attributes */

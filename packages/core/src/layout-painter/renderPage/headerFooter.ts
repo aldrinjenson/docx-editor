@@ -427,6 +427,8 @@ export function renderHeaderFooterContent(
         y: cursorY,
         width: measure.width,
         height: measure.height,
+        isFloating: block.displayMode === 'float',
+        zIndex: block.displayMode === 'float' ? getHeaderFooterTextBoxZIndex(block) : undefined,
         pmStart: block.pmStart,
         pmEnd: block.pmEnd,
       };
@@ -437,10 +439,17 @@ export function renderHeaderFooterContent(
         { ...context, positioning: 'absolute' },
         { document: doc }
       );
-      // Vertical position stays on the HF flow cursor (the anchor's positionV
-      // is not yet honored for HF text boxes); only the horizontal anchor is
-      // resolved here, which is what the reported page-centered banner needs.
-      fragEl.style.top = `${cursorY}px`;
+      const textBoxTop = block.position?.vertical
+        ? resolveHeaderFooterFloatTop(
+            {
+              height: measure.height,
+              paragraphY: cursorY,
+              position: { vertical: block.position.vertical },
+            },
+            layout
+          )
+        : cursorY;
+      fragEl.style.top = `${textBoxTop}px`;
       // Honor the anchor's horizontal position (e.g. centered relative to the
       // page) instead of pinning the box to the left.
       fragEl.style.left = resolveHeaderFooterFloatLeft(
@@ -502,4 +511,11 @@ export function renderHeaderFooterContent(
   }
 
   return containerEl;
+}
+
+function getHeaderFooterTextBoxZIndex(block: Extract<FlowBlock, { kind: 'textBox' }>): number {
+  const hasText = block.content.some((paragraph) =>
+    paragraph.runs.some((run) => run.kind !== 'text' || run.text.length > 0)
+  );
+  return hasText ? 1 : 0;
 }
