@@ -811,7 +811,15 @@
 .layout-page-header,
 .layout-page-footer {
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    opacity 0.15s ease;
+}
+/* Match Word's editing view: inactive header/footer stories are dimmed while
+   the body story is active. */
+.paged-editor__pages:not(.paged-editor--hf-editing) .layout-page-header,
+.paged-editor__pages:not(.paged-editor--hf-editing) .layout-page-footer {
+  opacity: 0.5;
 }
 .layout-page-header:hover,
 .layout-page-footer:hover {
@@ -856,6 +864,12 @@
 .paged-editor--hf-editing .layout-page-header,
 .paged-editor--hf-editing .layout-page-footer {
   cursor: default;
+}
+.paged-editor__pages.paged-editor--hf-editing .layout-page-header,
+.paged-editor__pages.paged-editor--hf-editing .layout-page-footer,
+.paged-editor--hf-editing .paged-editor__pages .layout-page-header,
+.paged-editor--hf-editing .paged-editor__pages .layout-page-footer {
+  opacity: 1;
 }
 
 /* Dotted border on active header area; text caret since it's being edited */
