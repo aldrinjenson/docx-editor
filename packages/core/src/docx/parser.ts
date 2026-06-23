@@ -32,7 +32,7 @@ import type {
   MediaFile,
   StyleDefinitions,
 } from '../types/document';
-import { unzipDocx, getMediaMimeType, type RawDocxContent } from './unzip';
+import { unzipDocx, getMediaMimeType, mediaToDataUrl, type RawDocxContent } from './unzip';
 import { parseRelationships, RELATIONSHIP_TYPES } from './relsParser';
 import { parseTheme, applyThemeFontLang } from './themeParser';
 import { parseStyles, parseStyleDefinitions, type StyleMap } from './styleParser';
@@ -54,6 +54,7 @@ import { loadEmbeddedFonts } from '../utils/embeddedFonts';
 import { parseFontTable } from './fontTableParser';
 import { type DocxInput, toArrayBuffer } from '../utils/docxInput';
 import { createTiffPreviewDataUrl } from './tiffPreview';
+import { extractMetafileRaster, isMetafileMimeType } from './metafileRaster';
 
 // ============================================================================
 // PROGRESS CALLBACK
@@ -63,6 +64,17 @@ import { createTiffPreviewDataUrl } from './tiffPreview';
  * Progress callback for tracking parsing stages
  */
 export type ProgressCallback = (stage: string, percent: number) => void;
+
+/**
+ * Host hook for converting media the browser can't render natively
+ * (EMF/WMF/TIFF) into a displayable `data:` or `blob:` URL. Receives the
+ * parsed {@link MediaFile} (original bytes on `.data`); return the replacement
+ * URL, or `null`/`undefined` to keep the built-in handling. Built-in handling
+ * already extracts an embedded PNG/JPEG from EMF/WMF when one exists — this
+ * hook is for the residual case (vector-only metafiles) where the host wants
+ * to rasterize server-side.
+ */
+export type MediaResolver = (file: MediaFile) => Promise<string | null | undefined>;
 
 /**
  * Parsing options
@@ -78,6 +90,11 @@ export interface ParseOptions {
   parseNotes?: boolean;
   /** Whether to detect template variables (default: true) */
   detectVariables?: boolean;
+  /**
+   * Optional async hook to convert non-browser-renderable media (EMF/WMF/TIFF)
+   * to a displayable URL. See {@link MediaResolver}.
+   */
+  mediaResolver?: MediaResolver;
 }
 
 // ============================================================================
@@ -101,6 +118,7 @@ export async function parseDocx(input: DocxInput, options: ParseOptions = {}): P
     parseHeadersFooters = true,
     parseNotes = true,
     detectVariables = true,
+    mediaResolver,
   } = options;
 
   const warnings: string[] = [];
@@ -189,6 +207,9 @@ export async function parseDocx(input: DocxInput, options: ParseOptions = {}): P
     // ========================================================================
     onProgress('Processing media files...', 35);
     const media = timeStage('media', () => buildMediaMap(raw, rels));
+    if (mediaResolver) {
+      await timeStageAsync('mediaResolver', () => applyMediaResolver(media, mediaResolver));
+    }
     onProgress('Processed media', 40);
 
     // ========================================================================
@@ -384,14 +405,15 @@ function buildMediaMap(raw: RawDocxContent, _rels: RelationshipMap): Map<string,
     const filename = path.split('/').pop() || path;
     const mimeType = getMediaMimeType(path);
 
-    // Create a data URL for the image
-    const bytes = new Uint8Array(data);
-    let binary = '';
-    for (let i = 0; i < bytes.length; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    const base64 = btoa(binary);
-    const dataUrl = `data:${mimeType};base64,${base64}`;
+    // EMF/WMF aren't browser-renderable. When the metafile wraps a raster
+    // (EMF+ bitmap record / StretchDIBits payload — the common case for Word
+    // header logos and OLE preview pictures), extract it and use that as the
+    // display URL. Original bytes stay on `data` so round-trip is unaffected.
+    const raster = isMetafileMimeType(mimeType) ? extractMetafileRaster(data) : null;
+    const dataUrl = mediaToDataUrl(
+      raster ? (raster.bytes.buffer as ArrayBuffer) : data,
+      raster ? raster.mimeType : mimeType
+    );
 
     const mediaFile: MediaFile = {
       path,
@@ -452,6 +474,28 @@ function createBrowserRenderablePreview(mimeType: string, data: ArrayBuffer): st
     return createTiffPreviewDataUrl(data);
   }
   return undefined;
+}
+
+/**
+ * Apply the host-supplied {@link MediaResolver} to every distinct MediaFile.
+ * The same `MediaFile` object is keyed under multiple paths (with and without
+ * the `word/` prefix), so de-dupe by identity before resolving.
+ */
+async function applyMediaResolver(
+  media: Map<string, MediaFile>,
+  resolver: MediaResolver
+): Promise<void> {
+  const files = [...new Set(media.values())];
+  await Promise.all(
+    files.map(async (file) => {
+      try {
+        const url = await resolver(file);
+        if (url) file.dataUrl = url;
+      } catch (err) {
+        console.warn(`[parseDocx] mediaResolver failed for ${file.path}:`, err);
+      }
+    })
+  );
 }
 
 /**

@@ -11,7 +11,15 @@
 
 import type { Node as PMNode } from 'prosemirror-model';
 import { schema } from '../../schema';
-import type { Paragraph, Run, ShapeContent, TextBox, Shape, Theme } from '../../../types/document';
+import type {
+  Paragraph,
+  ParagraphContent,
+  Run,
+  ShapeContent,
+  TextBox,
+  Shape,
+  Theme,
+} from '../../../types/document';
 import { emuToPixels } from '../../../docx/imageParser';
 import { resolveColorToHex } from '../../../utils/colorResolver';
 import type { StyleResolver } from '../../styles';
@@ -68,10 +76,53 @@ function partitionTextBoxesByAnchor(textBoxes: TextBox[]): {
 }
 
 /**
+ * Collect a paragraph's {@link Run}s in document order, descending through the
+ * same inline wrappers the parser does (`collectRunsThroughInlineWrappers` in
+ * `blockContentParser.ts`). A text box can be anchored from a run nested inside
+ * a content control, hyperlink, field, or tracked-change wrapper; if we only
+ * looked at top-level runs (the prior behavior), the editor save path would
+ * silently drop that text box. Mirror the wrapper set so the editor recovers
+ * exactly what headless does.
+ *
+ * Wrappers expose their nested content under different keys: hyperlink uses
+ * `children`, complexField uses `fieldResult`, everything else (inlineSdt,
+ * simpleField, ins/del/moveFrom/moveTo) uses `content`. (`smartTag` and inline
+ * `customXml` carry no model node — the parser flattens / skips them — so there
+ * is nothing to recurse into for those.)
+ */
+function collectRunsThroughInlineWrappers(content: readonly ParagraphContent[]): Run[] {
+  const runs: Run[] = [];
+  for (const item of content) {
+    if (item.type === 'run') {
+      runs.push(item);
+      continue;
+    }
+    const nested =
+      (
+        item as {
+          content?: ParagraphContent[];
+          children?: ParagraphContent[];
+          fieldResult?: ParagraphContent[];
+        }
+      ).content ??
+      (item as { children?: ParagraphContent[] }).children ??
+      (item as { fieldResult?: ParagraphContent[] }).fieldResult;
+    if (Array.isArray(nested)) {
+      runs.push(...collectRunsThroughInlineWrappers(nested));
+    }
+  }
+  return runs;
+}
+
+/**
  * Extract text boxes from paragraph runs.
  * Text boxes appear as ShapeContent where the shape has textBody,
  * or as anchored visual-only rectangles that can use the textBox block painter
  * for fill/outline/position fidelity.
+ *
+ * Runs are collected through inline wrappers (content controls, hyperlinks,
+ * fields, tracked-change wrappers) so a text box anchored from a nested run is
+ * recovered, not just a top-level one.
  */
 function extractTextBoxesFromParagraph(paragraph: Paragraph): {
   textBoxes: TextBox[];
@@ -79,31 +130,29 @@ function extractTextBoxesFromParagraph(paragraph: Paragraph): {
 } {
   const textBoxes: TextBox[] = [];
   const extractedShapes = new Set<ShapeContent>();
-  for (const content of paragraph.content) {
-    if (content.type === 'run') {
-      for (const rc of content.content) {
-        if (rc.type === 'shape' && 'shape' in rc) {
-          const shape = rc.shape as Shape;
-          if (shape.textBody && shape.textBody.content.length > 0) {
-            // Convert shape with text body to TextBox
-            textBoxes.push({
-              type: 'textBox',
-              id: shape.id,
-              size: shape.size,
-              position: shape.position,
-              wrap: shape.wrap,
-              relativeHeight: shape.relativeHeight,
-              fill: shape.fill,
-              outline: shape.outline,
-              content: shape.textBody.content,
-              autoFit: shape.textBody.autoFit,
-              margins: shape.textBody.margins,
-            });
-            extractedShapes.add(rc);
-          } else if (isAnchoredVisualRectangle(shape)) {
-            textBoxes.push(shapeToDecorativeTextBox(shape));
-            extractedShapes.add(rc);
-          }
+  for (const run of collectRunsThroughInlineWrappers(paragraph.content)) {
+    for (const rc of run.content) {
+      if (rc.type === 'shape' && 'shape' in rc) {
+        const shape = rc.shape as Shape;
+        if (shape.textBody && shape.textBody.content.length > 0) {
+          // Convert shape with text body to TextBox
+          textBoxes.push({
+            type: 'textBox',
+            id: shape.id,
+            size: shape.size,
+            position: shape.position,
+            wrap: shape.wrap,
+            relativeHeight: shape.relativeHeight,
+            fill: shape.fill,
+            outline: shape.outline,
+            content: shape.textBody.content,
+            autoFit: shape.textBody.autoFit,
+            margins: shape.textBody.margins,
+          });
+          extractedShapes.add(rc);
+        } else if (isAnchoredVisualRectangle(shape)) {
+          textBoxes.push(shapeToDecorativeTextBox(shape));
+          extractedShapes.add(rc);
         }
       }
     }
