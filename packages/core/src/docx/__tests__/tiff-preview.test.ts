@@ -14,13 +14,37 @@ describe('createTiffPreviewDataUrl', () => {
     expect(bmp.readInt32LE(18)).toBe(1);
     expect(bmp.readInt32LE(22)).toBe(-1);
   });
+
+  test('rejects strip byte counts larger than the source before allocation', () => {
+    const tiff = makeCmykTiff(1, 1, [0, 0, 0, 255], {
+      stripByteCount: 0x40000000,
+    });
+
+    expect(createTiffPreviewDataUrl(toArrayBuffer(tiff))).toBeUndefined();
+  });
+
+  test('rejects oversized dimensions before BMP allocation', () => {
+    const tiff = makeCmykTiff(100_000, 100_000, [0, 0, 0, 255]);
+
+    expect(createTiffPreviewDataUrl(toArrayBuffer(tiff))).toBeUndefined();
+  });
+
+  test('returns undefined instead of throwing for malformed buffers', () => {
+    expect(() => createTiffPreviewDataUrl(new ArrayBuffer(8))).not.toThrow();
+    expect(createTiffPreviewDataUrl(new ArrayBuffer(8))).toBeUndefined();
+  });
 });
 
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
 
-function makeCmykTiff(width: number, height: number, pixelBytes: number[]): Uint8Array {
+function makeCmykTiff(
+  width: number,
+  height: number,
+  pixelBytes: number[],
+  options: { stripByteCount?: number; stripOffset?: number } = {}
+): Uint8Array {
   const entryCount = 9;
   const ifdOffset = 8;
   const ifdByteLength = 2 + entryCount * 12 + 4;
@@ -50,9 +74,9 @@ function makeCmykTiff(width: number, height: number, pixelBytes: number[]): Uint
   writeEntry(258, 3, 4, bitsOffset);
   writeEntry(259, 3, 1, 1);
   writeEntry(262, 3, 1, 5);
-  writeEntry(273, 4, 1, pixelOffset);
+  writeEntry(273, 4, 1, options.stripOffset ?? pixelOffset);
   writeEntry(277, 3, 1, 4);
-  writeEntry(279, 4, 1, pixelBytes.length);
+  writeEntry(279, 4, 1, options.stripByteCount ?? pixelBytes.length);
   writeEntry(284, 3, 1, 1);
 
   view.setUint32(entryOffset, 0, true);

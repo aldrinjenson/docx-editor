@@ -19,6 +19,8 @@ const TAG_SAMPLES_PER_PIXEL = 277;
 const TAG_STRIP_BYTE_COUNTS = 279;
 const TAG_PLANAR_CONFIGURATION = 284;
 
+const MAX_TIFF_PREVIEW_PIXELS = 16_000_000;
+
 const TYPE_SIZES: Record<number, number> = {
   1: 1, // BYTE
   2: 1, // ASCII
@@ -36,6 +38,14 @@ type TiffEntry = {
 };
 
 export function createTiffPreviewDataUrl(data: ArrayBuffer): string | undefined {
+  try {
+    return createTiffPreviewDataUrlUnsafe(data);
+  } catch {
+    return undefined;
+  }
+}
+
+function createTiffPreviewDataUrlUnsafe(data: ArrayBuffer): string | undefined {
   const bytes = new Uint8Array(data);
   if (bytes.length < 8) return undefined;
 
@@ -62,6 +72,8 @@ export function createTiffPreviewDataUrl(data: ArrayBuffer): string | undefined 
   if (compression !== 1 || planarConfiguration !== 1 || photometric === undefined) {
     return undefined;
   }
+  if (samplesPerPixel < 1 || samplesPerPixel > 4) return undefined;
+  if (!isSafePixelShape(width, height, samplesPerPixel)) return undefined;
 
   const bits = valuesFor(entries.get(TAG_BITS_PER_SAMPLE), bytes, endian);
   const effectiveBits = bits.length > 0 ? bits : Array.from({ length: samplesPerPixel }, () => 8);
@@ -72,6 +84,7 @@ export function createTiffPreviewDataUrl(data: ArrayBuffer): string | undefined 
   if (stripOffsets.length === 0 || stripByteCounts.length === 0) return undefined;
 
   const pixelBytes = concatenateStrips(bytes, stripOffsets, stripByteCounts);
+  if (!pixelBytes) return undefined;
   const requiredBytes = width * height * samplesPerPixel;
   if (pixelBytes.length < requiredBytes) return undefined;
 
@@ -83,6 +96,15 @@ export function createTiffPreviewDataUrl(data: ArrayBuffer): string | undefined 
     photometric,
   });
   return bmp ? `data:image/bmp;base64,${bytesToBase64(bmp)}` : undefined;
+}
+
+function isSafePixelShape(width: number, height: number, samplesPerPixel: number): boolean {
+  if (!Number.isSafeInteger(width) || !Number.isSafeInteger(height)) return false;
+  if (width <= 0 || height <= 0) return false;
+  const pixels = width * height;
+  if (!Number.isSafeInteger(pixels) || pixels > MAX_TIFF_PREVIEW_PIXELS) return false;
+  const requiredBytes = pixels * samplesPerPixel;
+  return Number.isSafeInteger(requiredBytes);
 }
 
 function readIfd(bytes: Uint8Array, offset: number, endian: TiffEndian): Map<number, TiffEntry> {
@@ -132,14 +154,23 @@ function concatenateStrips(
   bytes: Uint8Array,
   stripOffsets: number[],
   stripByteCounts: number[]
-): Uint8Array {
-  const total = stripByteCounts.reduce((sum, count) => sum + Math.max(0, count), 0);
+): Uint8Array | undefined {
+  const stripCount = Math.min(stripOffsets.length, stripByteCounts.length);
+  let total = 0;
+  for (let i = 0; i < stripCount; i++) {
+    const count = stripByteCounts[i];
+    if (!Number.isSafeInteger(count) || count < 0) return undefined;
+    total += count;
+    if (!Number.isSafeInteger(total) || total > bytes.length) return undefined;
+  }
+
   const out = new Uint8Array(total);
   let cursor = 0;
-  for (let i = 0; i < stripOffsets.length; i++) {
+  for (let i = 0; i < stripCount; i++) {
     const offset = stripOffsets[i];
     const count = stripByteCounts[i] ?? 0;
-    if (offset < 0 || count <= 0 || offset + count > bytes.length) continue;
+    if (!Number.isSafeInteger(offset) || offset < 0 || count <= 0) continue;
+    if (count > bytes.length - offset) return undefined;
     out.set(bytes.subarray(offset, offset + count), cursor);
     cursor += count;
   }
