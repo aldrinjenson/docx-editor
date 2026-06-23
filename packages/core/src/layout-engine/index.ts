@@ -308,9 +308,7 @@ export function layoutDocument(
         handleSectionBreak(block as SectionBreakBlock, paginator, nextSectionConfig, promotedType);
 
         const nextBreakIndex = breakIndices[sectionIdx + 1];
-        const isTerminalSection = nextBreakIndex === undefined;
         if (
-          isTerminalSection &&
           (nextType ?? 'nextPage') === 'continuous' &&
           (nextSectionConfig.columns?.count ?? 1) > 1
         ) {
@@ -319,7 +317,7 @@ export function layoutDocument(
             measures,
             paginator,
             start: i + 1,
-            end: blocks.length,
+            end: nextBreakIndex ?? blocks.length,
           });
         }
 

@@ -171,6 +171,50 @@ describe('continuous section break geometry', () => {
     expect(balancedFragments.map((f) => f.x)).toEqual([50, 260]);
   });
 
+  test('balances a non-terminal continuous multi-column text section before the next section', () => {
+    const A = para('intro', 80);
+    const sb0: SectionBreakBlock = {
+      kind: 'sectionBreak',
+      id: 'sb0',
+      type: 'continuous',
+    };
+    const B = paraLines('two-column', 6, 20);
+    const sb1: SectionBreakBlock = {
+      kind: 'sectionBreak',
+      id: 'sb1',
+      type: 'continuous',
+      columns: { count: 2, gap: 20 },
+    };
+    const C = para('after', 80);
+
+    const blocks: FlowBlock[] = [A.block, sb0, B.block, sb1, C.block];
+    const measures = [
+      A.measure,
+      { kind: 'sectionBreak' },
+      B.measure,
+      { kind: 'sectionBreak' },
+      C.measure,
+    ] as never;
+
+    const result = layoutDocument(blocks, measures, {
+      pageSize: { w: 500, h: 500 },
+      margins: { top: 50, right: 50, bottom: 50, left: 50 },
+      bodyBreakType: 'nextPage',
+    });
+
+    const balancedFragments = result.pages[0].fragments.filter(
+      (f): f is ParagraphFragment => f.kind === 'paragraph' && f.blockId === 'two-column'
+    );
+
+    expect(result.pages[0].columns?.count).toBe(2);
+    expect(balancedFragments).toHaveLength(2);
+    expect(balancedFragments.map((f) => [f.fromLine, f.toLine])).toEqual([
+      [0, 3],
+      [3, 6],
+    ]);
+    expect(balancedFragments.map((f) => f.x)).toEqual([50, 260]);
+  });
+
   test('continuous break that changes orientation is promoted to a page break (Word/LibreOffice)', () => {
     // Mirrors a memo with a landscape table sandwiched between portrait prose:
     //   portrait A → [continuous, landscape] → B (wide table) → [continuous, portrait] → C
