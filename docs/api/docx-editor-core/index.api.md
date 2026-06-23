@@ -738,6 +738,7 @@ export interface HeaderFooter {
     hdrFtrType: HeaderFooterType;
     // (undocumented)
     type: 'header' | 'footer';
+    verbatimXml?: string;
     watermark?: Watermark;
 }
 
@@ -1122,6 +1123,7 @@ export interface PanelConfig {
 export interface Paragraph {
     content: ParagraphContent[];
     formatting?: ParagraphFormatting;
+    leadingBlockMarkers?: (BookmarkStart | BookmarkEnd)[];
     listRendering?: ListRendering;
     paraId?: string;
     pPrDel?: TrackedChangeInfo;
@@ -1130,6 +1132,7 @@ export interface Paragraph {
     renderedPageBreakBefore?: boolean;
     sectionProperties?: SectionProperties;
     textId?: string;
+    trailingBlockMarkers?: (BookmarkStart | BookmarkEnd)[];
     // (undocumented)
     type: 'paragraph';
 }
@@ -1688,8 +1691,10 @@ export interface SuggestedAction {
 export interface Table {
     columnWidths?: number[];
     formatting?: TableFormatting;
+    leadingBlockMarkers?: (BookmarkStart | BookmarkEnd)[];
     propertyChanges?: TablePropertyChange[];
     rows: TableRow[];
+    trailingBlockMarkers?: (BookmarkStart | BookmarkEnd)[];
     // (undocumented)
     type: 'table';
 }

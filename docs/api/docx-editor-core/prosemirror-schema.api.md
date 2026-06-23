@@ -156,6 +156,7 @@ export interface ParagraphAttrs {
     keepLines?: boolean;
     // (undocumented)
     keepNext?: boolean;
+    leadingBlockMarkers?: BlockBookmarkMarkers;
     // (undocumented)
     lineSpacing?: number;
     // (undocumented)
@@ -170,6 +171,7 @@ export interface ParagraphAttrs {
     listMarkerSuffix?: 'tab' | 'space' | 'nothing';
     listNumFmt?: NumberFormat;
     listStartOverride?: number;
+    loneBookmarkEndIds?: number[];
     // (undocumented)
     numPr?: {
         numId?: number;
@@ -212,6 +214,7 @@ export interface ParagraphAttrs {
     tabs?: TabStop[];
     // (undocumented)
     textId?: string;
+    trailingBlockMarkers?: BlockBookmarkMarkers;
 }
 
 // @public (undocumented)
@@ -232,11 +235,13 @@ export interface TableAttrs {
     columnWidths?: number[];
     floating?: FloatingTableProperties;
     justification?: 'left' | 'center' | 'right';
+    leadingBlockMarkers?: BlockBookmarkMarkers;
     look?: TableLook;
     _originalFormatting?: TableFormatting;
     styleId?: string;
     tableLayout?: 'fixed' | 'autofit' | null;
     tblPrChange?: TablePropertyChange[] | null;
+    trailingBlockMarkers?: BlockBookmarkMarkers;
     width?: number;
     widthType?: string;
 }
