@@ -162,7 +162,7 @@ export interface DocxEditorProps {
   showFileOpen?: boolean;
   /** Whether to show the Help menu in the menu bar (default: true) */
   showHelpMenu?: boolean;
-  /** Horizontal alignment of the formatting toolbar's contents (default: `'start'`); `'center'`/`'end'` use safe alignment so leading controls stay scroll-reachable on overflow. */
+  /** Horizontal alignment of the formatting toolbar's contents (default: `'start'`); `'center'`/`'end'` use auto margins so leading controls stay scroll-reachable on overflow. */
   toolbarAlignment?: 'start' | 'center' | 'end';
   /** Whether to show zoom control (default: true) */
   showZoomControl?: boolean;

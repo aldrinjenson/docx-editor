@@ -147,8 +147,8 @@ export interface ToolbarProps {
   inline?: boolean;
   /**
    * Horizontal alignment of the formatting bar's contents (default: `'start'`).
-   * `'center'` / `'end'` use safe alignment, so the leading controls stay
-   * scroll-reachable when the bar overflows a narrow viewport. Ignored when
+   * `'center'` / `'end'` are done with auto margins, so the leading controls
+   * stay scroll-reachable when the bar overflows a narrow viewport. Ignored when
    * `inline` is set (the bar has no flex container of its own in that mode).
    */
   toolbarAlignment?: 'start' | 'center' | 'end';
@@ -400,19 +400,21 @@ function stripUndefined<T extends object>(obj: T): Partial<T> {
 }
 
 /**
- * Maps the `toolbarAlignment` prop to the formatting bar's `justify-content`.
- * `center` and `end` use the `safe` keyword (via a Tailwind arbitrary property)
- * so the bar falls back to start alignment instead of clipping the leading
- * controls out of reach when its `overflow-x-auto` content is wider than the
- * viewport.
+ * Maps the `toolbarAlignment` prop to classes that position the formatting
+ * bar's contents. Centering/end-alignment is done with auto margins on the
+ * first/last child rather than `justify-content`, for two reasons: auto margins
+ * collapse to zero when the row's `overflow-x-auto` content is wider than the
+ * viewport (so the leading controls stay scroll-reachable instead of being
+ * clipped), and unlike the `safe` overflow keyword they work in every browser
+ * (WebKit/Safari does not implement `justify-content: safe center`).
  */
 const FORMATTING_BAR_ALIGNMENT_CLASS: Record<
   NonNullable<ToolbarProps['toolbarAlignment']>,
   string
 > = {
   start: '',
-  center: '[justify-content:safe_center]',
-  end: '[justify-content:safe_end]',
+  center: '[&>*:first-child]:ms-auto [&>*:last-child]:me-auto',
+  end: '[&>*:first-child]:ms-auto',
 };
 
 /**

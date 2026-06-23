@@ -71,21 +71,24 @@ function renderToolbar(toolbarAlignment: 'start' | 'center' | 'end') {
 }
 
 describe('Formatting toolbar alignment', () => {
-  test('defaults to start — no justify-content override on the formatting bar', () => {
+  test('defaults to start — no alignment margins on the formatting bar', () => {
     const { getByTestId } = renderToolbar('start');
     const bar = getByTestId('formatting-bar');
-    expect(bar.className).not.toContain('justify-content');
+    expect(bar.className).not.toContain('ms-auto');
+    expect(bar.className).not.toContain('me-auto');
   });
 
-  test('center applies safe-center justification', () => {
+  test('center auto-margins both ends so the contents sit in the middle', () => {
     const { getByTestId } = renderToolbar('center');
     const bar = getByTestId('formatting-bar');
-    expect(bar.className).toContain('[justify-content:safe_center]');
+    expect(bar.className).toContain('[&>*:first-child]:ms-auto');
+    expect(bar.className).toContain('[&>*:last-child]:me-auto');
   });
 
-  test('end applies safe-end justification', () => {
+  test('end auto-margins the leading edge so the contents sit on the right', () => {
     const { getByTestId } = renderToolbar('end');
     const bar = getByTestId('formatting-bar');
-    expect(bar.className).toContain('[justify-content:safe_end]');
+    expect(bar.className).toContain('[&>*:first-child]:ms-auto');
+    expect(bar.className).not.toContain('me-auto');
   });
 });
