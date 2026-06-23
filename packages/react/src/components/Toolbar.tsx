@@ -145,6 +145,13 @@ export interface ToolbarProps {
   children?: ReactNode;
   /** When true, renders with display:contents so children flow in the parent flex container */
   inline?: boolean;
+  /**
+   * Horizontal alignment of the formatting bar's contents (default: `'start'`).
+   * `'center'` / `'end'` use safe alignment, so the leading controls stay
+   * scroll-reachable when the bar overflows a narrow viewport. Ignored when
+   * `inline` is set (the bar has no flex container of its own in that mode).
+   */
+  toolbarAlignment?: 'start' | 'center' | 'end';
   /** Whether to show font family picker (default: true) */
   showFontPicker?: boolean;
   /**
@@ -393,6 +400,22 @@ function stripUndefined<T extends object>(obj: T): Partial<T> {
 }
 
 /**
+ * Maps the `toolbarAlignment` prop to the formatting bar's `justify-content`.
+ * `center` and `end` use the `safe` keyword (via a Tailwind arbitrary property)
+ * so the bar falls back to start alignment instead of clipping the leading
+ * controls out of reach when its `overflow-x-auto` content is wider than the
+ * viewport.
+ */
+const FORMATTING_BAR_ALIGNMENT_CLASS: Record<
+  NonNullable<ToolbarProps['toolbarAlignment']>,
+  string
+> = {
+  start: '',
+  center: '[justify-content:safe_center]',
+  end: '[justify-content:safe_end]',
+};
+
+/**
  * Icon-based formatting toolbar — undo/redo, zoom, styles, fonts,
  * bold/italic/underline, colors, alignment, lists, table/image context, clear formatting.
  */
@@ -435,6 +458,7 @@ export function Toolbar(explicitProps: ToolbarProps) {
     tableContext,
     onTableAction,
     inline = false,
+    toolbarAlignment = 'start',
   } = props;
 
   const barRef = useRef<HTMLDivElement>(null);
@@ -679,6 +703,7 @@ export function Toolbar(explicitProps: ToolbarProps) {
       className={cn(
         !inline &&
           'flex items-center px-2 py-1 bg-muted rounded-full min-h-[36px] overflow-x-auto mx-2 mb-1',
+        !inline && FORMATTING_BAR_ALIGNMENT_CLASS[toolbarAlignment],
         className
       )}
       style={inline ? { display: 'contents', ...style } : style}

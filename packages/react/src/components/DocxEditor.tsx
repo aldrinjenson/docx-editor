@@ -162,6 +162,8 @@ export interface DocxEditorProps {
   showFileOpen?: boolean;
   /** Whether to show the Help menu in the menu bar (default: true) */
   showHelpMenu?: boolean;
+  /** Horizontal alignment of the formatting toolbar's contents (default: `'start'`); `'center'`/`'end'` use safe alignment so leading controls stay scroll-reachable on overflow. */
+  toolbarAlignment?: 'start' | 'center' | 'end';
   /** Whether to show zoom control (default: true) */
   showZoomControl?: boolean;
   /** Whether to show page margin guides/boundaries (default: false) */
@@ -606,6 +608,7 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
     showToolbar = true,
     showFileOpen = true,
     showHelpMenu = true,
+    toolbarAlignment = 'start',
     showZoomControl = true,
     showMarginGuides: _showMarginGuides = false,
     marginGuideColor: _marginGuideColor,
@@ -1809,6 +1812,7 @@ export const DocxEditor = forwardRef<DocxEditorRef, DocxEditorProps>(function Do
             documentFonts={documentFonts}
             zoom={state.zoom}
             showZoomControl={showZoomControl}
+            toolbarAlignment={toolbarAlignment}
             onFormat={handleFormat}
             onUndo={undoActiveEditor}
             onRedo={redoActiveEditor}

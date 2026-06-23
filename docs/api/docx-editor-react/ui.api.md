@@ -1255,6 +1255,7 @@ export interface ToolbarProps {
         cellBackgroundColor?: string;
     } | null;
     theme?: Theme | null;
+    toolbarAlignment?: 'start' | 'center' | 'end';
     zoom?: number;
 }
 

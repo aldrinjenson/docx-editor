@@ -113,6 +113,7 @@ export interface DocxEditorProps {
     showZoomControl?: boolean;
     style?: CSSProperties;
     theme?: Theme | null;
+    toolbarAlignment?: 'start' | 'center' | 'end';
     toolbarExtra?: ReactNode;
     watermarkPresets?: readonly string[];
 }

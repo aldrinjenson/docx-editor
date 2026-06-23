@@ -71,6 +71,7 @@ export function DocxEditorToolbar({
   documentFonts,
   zoom,
   showZoomControl,
+  toolbarAlignment,
   // Handlers
   onFormat,
   onUndo,
@@ -121,6 +122,7 @@ export function DocxEditorToolbar({
   documentFonts?: readonly FontOption[];
   zoom: number;
   showZoomControl: boolean;
+  toolbarAlignment: 'start' | 'center' | 'end';
   onFormat: (action: FormattingAction) => void;
   onUndo: () => void;
   onRedo: () => void;
@@ -162,6 +164,7 @@ export function DocxEditorToolbar({
         canUndo={pmState ? undoDepth(pmState) > 0 : false}
         canRedo={pmState ? redoDepth(pmState) > 0 : false}
         disabled={readOnly}
+        toolbarAlignment={toolbarAlignment}
         documentStyles={document?.package.styles?.styles}
         theme={document?.package.theme || theme}
         fontFamilies={fontFamilies}

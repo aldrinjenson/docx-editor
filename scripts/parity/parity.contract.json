@@ -65,7 +65,8 @@
       "pluginSidebarItems": "Sidebar plugin items. Pairs with the Vue plugin-api gap.",
       "printOptions": "Print configuration. Vue uses onPrint without options object.",
       "rulerUnit": "Ruler unit toggle (inch/cm). Vue uses inch only currently.",
-      "showMarginGuides": "Margin guide overlay. Pairs with marginGuideColor \u2014 both deferred together."
+      "showMarginGuides": "Margin guide overlay. Pairs with marginGuideColor \u2014 both deferred together.",
+      "toolbarAlignment": "Formatting-toolbar alignment (start/center/end). React-only until the Vue toolbar exposes the same option."
     },
     "vueExclusive": {
       "showMenuBar": "Vue adapter ships a Google-Docs-style menu bar above the toolbar. React uses a single toolbar with no menu-bar concept."

@@ -141,6 +141,7 @@ function renderToolbar({ showFileOpen, onOpen }: { showFileOpen: boolean; onOpen
       fontFamilies={undefined}
       zoom={1}
       showZoomControl={false}
+      toolbarAlignment="start"
       onFormat={noop}
       onUndo={noop}
       onRedo={noop}

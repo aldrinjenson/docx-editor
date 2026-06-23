@@ -14,7 +14,7 @@ afterEach(() => {
   cleanup();
 });
 
-function renderToolbar({ showHelpMenu }: { showHelpMenu: boolean }) {
+function renderToolbar(toolbarAlignment: 'start' | 'center' | 'end') {
   const noop = () => {};
   return render(
     <DocxEditorToolbar
@@ -43,13 +43,13 @@ function renderToolbar({ showHelpMenu }: { showHelpMenu: boolean }) {
       fontFamilies={undefined}
       zoom={1}
       showZoomControl={false}
-      toolbarAlignment="start"
+      toolbarAlignment={toolbarAlignment}
       onFormat={noop}
       onUndo={noop}
       onRedo={noop}
       onPrint={noop}
       showFileOpen={true}
-      showHelpMenu={showHelpMenu}
+      showHelpMenu={true}
       onOpen={noop}
       onSave={noop}
       onZoomChange={noop}
@@ -70,18 +70,22 @@ function renderToolbar({ showHelpMenu }: { showHelpMenu: boolean }) {
   );
 }
 
-describe('Help menu visibility', () => {
-  test('shows the Help menu by default', () => {
-    const toolbar = renderToolbar({ showHelpMenu: true });
-    expect(toolbar.getByRole('button', { name: 'Help' })).toBeTruthy();
+describe('Formatting toolbar alignment', () => {
+  test('defaults to start — no justify-content override on the formatting bar', () => {
+    const { getByTestId } = renderToolbar('start');
+    const bar = getByTestId('formatting-bar');
+    expect(bar.className).not.toContain('justify-content');
   });
 
-  test('showHelpMenu=false hides the Help menu but keeps the other menus', () => {
-    const toolbar = renderToolbar({ showHelpMenu: false });
-    expect(toolbar.queryByRole('button', { name: 'Help' })).toBeNull();
-    // The rest of the menu bar is untouched — hiding Help must not collapse the bar.
-    expect(toolbar.getByRole('button', { name: 'File' })).toBeTruthy();
-    expect(toolbar.getByRole('button', { name: 'Format' })).toBeTruthy();
-    expect(toolbar.getByRole('button', { name: 'Insert' })).toBeTruthy();
+  test('center applies safe-center justification', () => {
+    const { getByTestId } = renderToolbar('center');
+    const bar = getByTestId('formatting-bar');
+    expect(bar.className).toContain('[justify-content:safe_center]');
+  });
+
+  test('end applies safe-end justification', () => {
+    const { getByTestId } = renderToolbar('end');
+    const bar = getByTestId('formatting-bar');
+    expect(bar.className).toContain('[justify-content:safe_end]');
   });
 });
